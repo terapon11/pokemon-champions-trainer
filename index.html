@@ -61,6 +61,13 @@
   .mvbar span{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent))}
   .mvpct{width:42px;text-align:right;color:var(--sub);font-variant-numeric:tabular-nums}
   .face img{width:170px;height:170px;object-fit:contain}
+  .front{overflow-y:auto}
+  .front #fImg{width:130px;height:130px}
+  .frontstats{width:100%;max-width:300px;margin:6px 0 2px}
+  .onecard{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px}
+  .cardhead{display:flex;gap:14px;align-items:center;margin-bottom:6px}
+  .cardhead img{width:108px;height:108px;object-fit:contain;flex-shrink:0}
+  .cardhead .bigname{font-size:20px;margin-bottom:4px}
   .bigname{font-size:22px;font-weight:800;margin-top:6px}
   .hint{color:var(--sub);margin-top:auto;font-size:13px}
   .statrow{display:flex;justify-content:space-between;align-items:center;margin:3px 0;font-size:14px}
@@ -150,7 +157,7 @@
 </head>
 <body>
 <header>
-  <h1>ポケモン<span>チャンピオンズ</span> 暗記トレーナー <span style="font-size:12px;color:var(--sub);font-weight:400">シングル使用率 TOP50 ｜ シーズンM-3</span></h1>
+  <h1>ポケモン<span>チャンピオンズ</span> 暗記トレーナー <span style="font-size:12px;color:var(--sub);font-weight:400">シングル使用率 TOP100 ｜ シーズンM-3</span></h1>
   <div class="tabs">
     <div class="tab active" data-mode="list">📋 一覧</div>
     <div class="tab" data-mode="flash">🃏 カード暗記</div>
@@ -192,18 +199,7 @@
       <span class="muted" id="flashCount"></span>
     </div>
     <div class="detail">
-      <div class="flip" id="flip">
-        <div class="flipinner">
-          <div class="face front">
-            <div class="rank muted" id="fFront-rank" style="align-self:flex-start"></div>
-            <img id="fImg" alt="">
-            <div class="bigname" id="fName"></div>
-            <div class="types" id="fTypes"></div>
-            <div class="hint">タップして種族値・特性・技を見る 👆</div>
-          </div>
-          <div class="face back" id="fBack"></div>
-        </div>
-      </div>
+      <div class="onecard" id="fCard"></div>
       <div class="navrow">
         <button class="btn ghost" id="prevBtn">← 前</button>
         <button class="btn" id="learnBtn">覚えた ✓</button>
@@ -766,7 +762,6 @@ document.getElementById("filterRank").onchange=renderList;
 
 /* ===== カード暗記 ===== */
 let flashOrder=P.map((_,i)=>i), flashIndex=0, flashMega=0;
-const flip=document.getElementById("flip");
 function activeFlashList(){
   const only=document.getElementById("onlyUnlearned").checked;
   return flashOrder.filter(i=>!only||!learned.has(P[i].r));
@@ -779,36 +774,30 @@ function activeForm(p){
 function renderFlash(){
   const order=activeFlashList();
   const mt=document.getElementById("megaToggle");
-  if(order.length===0){document.getElementById("fName").textContent="全て習得済み🎉";mt.classList.add("hidden");return;}
+  const card=document.getElementById("fCard");
+  if(order.length===0){ card.innerHTML='<div class="bigname" style="text-align:center;padding:40px 0">全て習得済み🎉</div>'; mt.classList.add("hidden"); return; }
   if(flashIndex>=order.length) flashIndex=0;
   const p=P[order[flashIndex]];
   const f=activeForm(p);
-  flip.classList.remove("flipped");
-  document.getElementById("fFront-rank").textContent=`#${p.r}（使用率${p.r}位）`;
-  const img=document.getElementById("fImg"); img.src=imgUrl(p); imgFallback(img,p);
-  document.getElementById("fName").innerHTML=f.mega?`${f.nm} <span style="font-size:12px;color:var(--accent);font-weight:800">⚡MEGA</span>`:f.nm;
-  document.getElementById("fTypes").innerHTML=typeTags(f.t);
   document.getElementById("flashCount").textContent=`${flashIndex+1} / ${order.length}`;
   document.getElementById("learnBtn").textContent=learned.has(p.r)?"習得済み ✓":"覚えた ✓";
-  if(p.mega){
-    mt.classList.remove("hidden");
-    const n=p.mega.length;
-    mt.textContent=flashMega===0?"⚡ メガを見る":(flashMega<n?"⚡ 次のメガ →":"↩ 通常に戻す");
-  }else{ mt.classList.add("hidden"); }
-  // back
+  if(p.mega){ mt.classList.remove("hidden"); const n=p.mega.length; mt.textContent=flashMega===0?"⚡ メガを見る":(flashMega<n?"⚡ 次のメガ →":"↩ 通常に戻す"); } else { mt.classList.add("hidden"); }
   const maxStat=180;
-  const stats=f.s.map((v,i)=>`
-    <div class="statrow"><span class="statlbl">${STAT_LABELS[i]}</span>
-    <span class="bar"><span class="barfill" style="width:${Math.min(100,Math.round(v/maxStat*100))}%;background:${barColor(v)}"></span></span>
-    <span class="statval">${v}</span></div>`).join("");
+  const stats=f.s.map((v,i)=>`<div class="statrow"><span class="statlbl">${STAT_LABELS[i]}</span><span class="bar"><span class="barfill" style="width:${Math.min(100,Math.round(v/maxStat*100))}%;background:${barColor(v)}"></span></span><span class="statval">${v}</span></div>`).join("");
   const abilities=f.ab.map(a=>`<div class="abrow"><b>${a}</b><br><span>${abDesc(a)}</span></div>`).join("");
   const movesHtml=p.mvr.map(([nm,pct])=>`<div class="moverow"><span class="mvname">${nm}</span><span class="mvbar"><span style="width:${Math.min(100,pct)}%"></span></span><span class="mvpct">${pct}%</span></div>`).join("");
   const itemsHtml=(p.itr&&p.itr.length)?p.itr.map(([nm,pct])=>`<div class="moverow"><span class="mvname">${nm}</span><span class="mvbar"><span style="width:${Math.min(100,pct)}%;background:linear-gradient(90deg,#3ddc84,#9bd64a)"></span></span><span class="mvpct">${pct}%</span></div>`).join(""):'<div class="role">データなし</div>';
-  document.getElementById("fBack").innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:baseline">
-      <div class="bigname" style="font-size:18px">${f.nm}${f.mega?' <span style="font-size:11px;color:var(--accent)">⚡MEGA</span>':''}</div>
-      <div class="total">合計 ${f.total}</div></div>
-    <div class="sec"><div class="types" style="justify-content:flex-start;margin:0 0 6px">${typeTags(f.t)}</div></div>
+  const fb=`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.id}.png`;
+  card.innerHTML=`
+    <div class="rank muted">#${p.r}（使用率${p.r}位）</div>
+    <div class="cardhead">
+      <img src="${imgUrl(p)}" alt="${f.nm}" onerror="this.onerror=null;this.src='${fb}'">
+      <div>
+        <div class="bigname">${f.nm}${f.mega?' <span style="font-size:12px;color:var(--accent);font-weight:800">⚡MEGA</span>':''}</div>
+        <div class="types">${typeTags(f.t)}</div>
+        <div class="total" style="margin-top:6px">合計 ${f.total}</div>
+      </div>
+    </div>
     <div class="sec">${stats}</div>
     <div class="sec"><h3>特性${f.mega?'（メガ後）':''}</h3>${abilities}</div>
     <div class="sec"><h3>採用技 トップ10（使用率）</h3><div class="moves">${movesHtml}</div></div>
@@ -816,7 +805,6 @@ function renderFlash(){
     <div class="sec"><h3>役割</h3><div class="role">${p.role}</div></div>`;
 }
 function barColor(v){ if(v>=120)return"#3ddc84"; if(v>=90)return"#9bd64a"; if(v>=60)return"#f0c020"; return"#ff8a5c"; }
-flip.onclick=()=>flip.classList.toggle("flipped");
 document.getElementById("megaToggle").onclick=(e)=>{e.stopPropagation();const p=curFlashP();if(!p||!p.mega)return;flashMega=(flashMega+1)%(p.mega.length+1);renderFlash();};
 document.getElementById("nextBtn").onclick=()=>{flashIndex++;flashMega=0;renderFlash();};
 document.getElementById("prevBtn").onclick=()=>{const n=activeFlashList().length;flashIndex=(flashIndex-1+n)%n;flashMega=0;renderFlash();};
