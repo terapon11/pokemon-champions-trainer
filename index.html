@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポケモンチャンピオンズ 暗記トレーナー</title>
+<style>
+  :root{
+    --bg:#0f1320; --panel:#1a2032; --panel2:#222a40; --line:#323b57;
+    --txt:#e8ecf6; --sub:#9aa6c4; --accent:#f7b733; --accent2:#4e9bff;
+    --good:#3ddc84; --bad:#ff5d6c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+    background:linear-gradient(160deg,#0f1320,#141a2c);color:var(--txt);min-height:100vh}
+  header{padding:14px 16px;border-bottom:1px solid var(--line);background:rgba(15,19,32,.85);
+    position:sticky;top:0;z-index:10;backdrop-filter:blur(8px)}
+  h1{font-size:18px;margin:0 0 10px;letter-spacing:.02em}
+  h1 span{color:var(--accent)}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap}
+  .tab{padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);
+    color:var(--sub);cursor:pointer;font-size:14px;font-weight:600}
+  .tab.active{background:var(--accent);color:#1a1300;border-color:var(--accent)}
+  main{max-width:1080px;margin:0 auto;padding:16px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  select,input,button{font-family:inherit}
+  select,input[type=text]{background:var(--panel);color:var(--txt);border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;font-size:14px}
+  .btn{background:var(--accent2);color:#fff;border:none;border-radius:8px;padding:9px 16px;
+    font-size:14px;font-weight:700;cursor:pointer}
+  .btn.ghost{background:var(--panel);color:var(--txt);border:1px solid var(--line)}
+  .btn:active{transform:translateY(1px)}
+  .muted{color:var(--sub);font-size:13px}
+
+  /* grid list */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .pcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;
+    text-align:center;cursor:pointer;transition:.15s;position:relative}
+  .pcard:hover{border-color:var(--accent2);transform:translateY(-2px)}
+  .pcard .rank{position:absolute;top:8px;left:8px;font-size:11px;color:var(--sub);font-weight:700}
+  .pcard .learned{position:absolute;top:6px;right:8px;font-size:14px}
+  .pcard img{width:96px;height:96px;object-fit:contain;image-rendering:auto}
+  .pcard .nm{font-weight:700;font-size:14px;margin-top:2px}
+  .types{display:flex;gap:4px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+  .type{font-size:11px;padding:2px 8px;border-radius:999px;color:#fff;font-weight:700}
+
+  /* detail / flashcard */
+  .detail{max-width:480px;margin:0 auto}
+  .flip{perspective:1200px}
+  .flipinner{position:relative;transition:transform .5s;transform-style:preserve-3d;min-height:560px}
+  .flip.flipped .flipinner{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;background:var(--panel);
+    border:1px solid var(--line);border-radius:18px;padding:18px;display:flex;flex-direction:column;align-items:center}
+  .back{transform:rotateY(180deg);align-items:stretch;overflow-y:auto}
+  .abrow{font-size:13px;margin:5px 0;line-height:1.45}
+  .abrow b{color:var(--txt)} .abrow span{color:var(--sub)}
+  .moves{display:flex;flex-direction:column;gap:4px}
+  .moverow{display:flex;align-items:center;gap:8px;font-size:13px}
+  .mvname{width:118px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mvbar{flex:1;height:8px;background:#0c1020;border-radius:4px;overflow:hidden}
+  .mvbar span{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+  .mvpct{width:42px;text-align:right;color:var(--sub);font-variant-numeric:tabular-nums}
+  .face img{width:170px;height:170px;object-fit:contain}
+  .bigname{font-size:22px;font-weight:800;margin-top:6px}
+  .hint{color:var(--sub);margin-top:auto;font-size:13px}
+  .statrow{display:flex;justify-content:space-between;align-items:center;margin:3px 0;font-size:14px}
+  .statlbl{color:var(--sub);width:54px}
+  .bar{flex:1;height:9px;background:#0c1020;border-radius:5px;margin:0 8px;overflow:hidden}
+  .barfill{height:100%;border-radius:5px}
+  .statval{width:34px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+  .sec{margin-top:10px}
+  .sec h3{font-size:12px;color:var(--accent);margin:0 0 4px;letter-spacing:.04em}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:13px}
+  .role{font-size:13px;color:var(--sub);line-height:1.5}
+  .navrow{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:8px}
+  .total{font-weight:800;color:var(--accent)}
+
+  /* quiz */
+  .quizsetup{max-width:520px;margin:0 auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;padding:20px}
+  .qopt{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);
+    border-radius:10px;margin-bottom:8px;cursor:pointer}
+  .qopt input{width:18px;height:18px}
+  .quizbox{max-width:520px;margin:0 auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;padding:20px;text-align:center}
+  .qprompt{font-size:16px;margin:6px 0 4px;color:var(--sub)}
+  .qmain{font-size:20px;font-weight:800;margin-bottom:14px}
+  .qmain.small{font-size:15px;font-weight:600;line-height:1.7}
+  .choices{display:grid;gap:10px}
+  .choice{padding:13px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+    color:var(--txt);font-size:15px;font-weight:600;cursor:pointer;text-align:center}
+  .choice:hover{border-color:var(--accent2)}
+  .choice.correct{background:var(--good);color:#06351c;border-color:var(--good)}
+  .choice.wrong{background:var(--bad);color:#3a0007;border-color:var(--bad)}
+  .choice:disabled{cursor:default}
+  .qstat{display:flex;justify-content:space-between;font-size:13px;color:var(--sub);margin-bottom:10px}
+  .qimg{width:150px;height:150px;object-fit:contain}
+  .statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+  .statgrid div{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px}
+  .statgrid b{display:block;font-size:18px}
+  .statgrid small{color:var(--sub)}
+  .result{text-align:center}
+  .scorebig{font-size:46px;font-weight:900;color:var(--accent);margin:10px 0}
+  .speedbox{max-width:520px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .sprow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .sprow label{color:var(--sub);font-size:14px;flex-shrink:0}
+  .sprow select,.sprow input{flex:1;max-width:280px}
+  .btngroup,.stepgroup{display:flex;gap:6px;flex:1;max-width:280px;justify-content:flex-end}
+  .btngroup button{flex:1;padding:9px 4px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--sub);font-size:13px;font-weight:700;cursor:pointer}
+  .btngroup button.on{background:var(--accent2);color:#fff;border-color:var(--accent2)}
+  .stepgroup{align-items:center}
+  .stepgroup button{width:46px;height:40px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--txt);font-size:18px;font-weight:800;cursor:pointer}
+  .stepgroup button:active{transform:translateY(1px)}
+  .stepgroup input{flex:1;text-align:center}
+  .stepval{min-width:54px;text-align:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+  .spcompare{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .spside{flex:1 1 320px;min-width:0;margin:0}
+  .sptitle{font-weight:800;text-align:center;margin:0 0 12px;font-size:16px}
+  .sptitle.L{color:var(--accent2)} .sptitle.R{color:var(--accent)}
+  .spside .sprow label{min-width:48px}
+  .spverdict{max-width:680px;margin:16px auto 0;text-align:center;font-size:17px;font-weight:800;min-height:26px}
+  .dmgresult{max-width:680px;margin:16px auto 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center}
+  .dmgbig{font-size:30px;font-weight:900;color:var(--bad);margin:2px 0}
+  .dmgpct{font-size:16px;color:var(--sub);margin-bottom:10px}
+  .dmgko{font-size:20px;font-weight:800;margin:8px 0}
+  .dmgbarwrap{height:16px;background:#0c1020;border-radius:8px;overflow:hidden;margin:10px 0;position:relative}
+  .dmgbarwrap .lo{position:absolute;left:0;top:0;bottom:0;background:#f0a020;opacity:.5}
+  .dmgbarwrap .hi{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#ff8a5c,#ff5d6c)}
+  .dmgeff{display:inline-block;padding:3px 12px;border-radius:999px;font-size:13px;font-weight:700;margin-bottom:6px}
+  .dmgmini{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+  .dmgmini label{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--sub);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px 9px;cursor:pointer}
+  .dmgfield{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:680px;margin:14px auto 0}
+  .dmgfield label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--sub);font-weight:700}
+  .dmgfield select{min-width:120px}
+  .spresult{margin-top:16px;border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
+  .spcard{display:flex;align-items:center;justify-content:space-between;background:var(--panel2);
+    border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+  .spcard .lbl{font-size:14px;color:var(--sub)}
+  .spcard .val{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums}
+  .spcard.main{border-color:var(--accent2)} .spcard.main .val{color:var(--accent2)}
+  .spcard.scarf .val{color:#f0a020} .spcard.tail .val{color:var(--good)} .spcard.para .val{color:var(--bad)}
+  .spcard small{color:var(--sub);font-size:11px;font-weight:400}
+  .hidden{display:none}
+  .feedback{min-height:24px;font-weight:700;margin:12px 0 4px}
+  .feedback.ok{color:var(--good)} .feedback.ng{color:var(--bad)}
+</style>
+</head>
+<body>
+<header>
+  <h1>ポケモン<span>チャンピオンズ</span> 暗記トレーナー <span style="font-size:12px;color:var(--sub);font-weight:400">シングル使用率 TOP50 ｜ シーズンM-3</span></h1>
+  <div class="tabs">
+    <div class="tab active" data-mode="list">📋 一覧</div>
+    <div class="tab" data-mode="flash">🃏 カード暗記</div>
+    <div class="tab" data-mode="quiz">❓ クイズ</div>
+    <div class="tab" data-mode="speed">⚡ 素早さ計算</div>
+    <div class="tab" data-mode="dmg">💥 ダメージ計算</div>
+  </div>
+</header>
+<main>
+  <!-- LIST -->
+  <section id="view-list">
+    <div class="controls">
+      <input type="text" id="search" placeholder="🔍 名前・特性・技で検索">
+      <select id="filterType"><option value="">全タイプ</option></select>
+      <select id="filterRank">
+        <option value="">全順位</option>
+        <option value="1-10">1–10位</option>
+        <option value="11-20">11–20位</option>
+        <option value="21-30">21–30位</option>
+        <option value="31-40">31–40位</option>
+        <option value="41-50">41–50位</option>
+        <option value="51-60">51–60位</option>
+        <option value="61-70">61–70位</option>
+        <option value="71-80">71–80位</option>
+        <option value="81-90">81–90位</option>
+        <option value="91-100">91–100位</option>
+      </select>
+      <span class="muted" id="listCount"></span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- FLASHCARD -->
+  <section id="view-flash" class="hidden">
+    <div class="controls" style="justify-content:center">
+      <button class="btn ghost" id="shuffleBtn">🔀 シャッフル</button>
+      <button class="btn ghost hidden" id="megaToggle">⚡ メガを見る</button>
+      <label class="muted"><input type="checkbox" id="onlyUnlearned"> 未習得のみ</label>
+      <span class="muted" id="flashCount"></span>
+    </div>
+    <div class="detail">
+      <div class="flip" id="flip">
+        <div class="flipinner">
+          <div class="face front">
+            <div class="rank muted" id="fFront-rank" style="align-self:flex-start"></div>
+            <img id="fImg" alt="">
+            <div class="bigname" id="fName"></div>
+            <div class="types" id="fTypes"></div>
+            <div class="hint">タップして種族値・特性・技を見る 👆</div>
+          </div>
+          <div class="face back" id="fBack"></div>
+        </div>
+      </div>
+      <div class="navrow">
+        <button class="btn ghost" id="prevBtn">← 前</button>
+        <button class="btn" id="learnBtn">覚えた ✓</button>
+        <button class="btn ghost" id="nextBtn">次 →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="view-quiz" class="hidden">
+    <div id="quizSetup" class="quizsetup">
+      <h2 style="margin-top:0">クイズ設定</h2>
+      <p class="muted">出題形式を選んでください（複数選択可）</p>
+      <label class="qopt"><input type="checkbox" class="qtype" value="stat" checked> <b>種族値あて</b>：合計／素早さを4択で当てる</label>
+      <label class="qopt"><input type="checkbox" class="qtype" value="ability" checked> <b>特性あて</b>：特性⇄ポケモンを当てる</label>
+      <label class="qopt"><input type="checkbox" class="qtype" value="moves" checked> <b>技→ポケモン</b>：技構成から誰かを当てる</label>
+      <label class="qopt"><input type="checkbox" class="qtype" value="reverse" checked> <b>逆引き</b>：種族値だけでポケモンを当てる（上級）</label>
+      <div style="margin:14px 0 18px">
+        <label class="muted">問題数：
+          <select id="qCount"><option>10</option><option selected>15</option><option>20</option><option>30</option></select>
+        </label>
+      </div>
+      <button class="btn" id="startQuiz" style="width:100%">スタート ▶</button>
+    </div>
+
+    <div id="quizPlay" class="quizbox hidden">
+      <div class="qstat"><span id="qProgress"></span><span id="qScore"></span></div>
+      <div id="qContent"></div>
+      <div class="feedback" id="qFeedback"></div>
+      <button class="btn hidden" id="qNext" style="width:100%">次へ →</button>
+    </div>
+
+    <div id="quizResult" class="quizbox result hidden">
+      <h2 style="margin-top:0">結果</h2>
+      <div class="scorebig" id="rScore"></div>
+      <div class="muted" id="rDetail"></div>
+      <div id="rReview" style="text-align:left;margin:16px 0"></div>
+      <button class="btn" id="retryQuiz" style="width:100%">もう一度 🔁</button>
+    </div>
+  </section>
+
+  <!-- SPEED CALC -->
+  <section id="view-speed" class="hidden">
+    <h2 style="text-align:center;margin:4px 0 12px">⚡ 素早さ比較</h2>
+    <datalist id="spList"></datalist>
+    <div class="spcompare" id="spCompare"></div>
+    <div id="spVerdict" class="spverdict"></div>
+    <p class="muted" style="font-size:12px;margin:12px auto 0;max-width:660px;text-align:center">※ レベル50・個体値31固定。努力値32＝最大投資。各補正は小数点切り捨て。スカーフ／追い風／まひはランク適用後の値への倍率です。</p>
+  </section>
+
+  <!-- DAMAGE CALC -->
+  <section id="view-dmg" class="hidden">
+    <h2 style="text-align:center;margin:4px 0 12px">💥 ダメージ計算</h2>
+    <datalist id="dmgList"></datalist>
+    <datalist id="dMoveList"></datalist>
+    <div class="spcompare" id="dmgCompare"></div>
+    <div class="dmgfield" id="dmgField">
+      <label>天候 <select id="dWeather"><option value="none">なし</option><option value="sun">晴れ</option><option value="rain">雨</option><option value="sand">砂</option><option value="snow">雪</option></select></label>
+      <label>フィールド <select id="dTerrain"><option value="none">なし</option><option value="electric">エレキ</option><option value="grassy">グラス</option><option value="psychic">サイコ</option><option value="misty">ミスト</option></select></label>
+      <label>壁 <select id="dWall"><option value="none">なし</option><option value="reflect">リフレクター</option><option value="light">ひかりのかべ</option><option value="aurora">オーロラベール</option></select></label>
+    </div>
+    <div id="dmgResult" class="dmgresult"></div>
+    <p class="muted" style="font-size:12px;margin:12px auto 0;max-width:680px;text-align:center">※ レベル50・個体値31固定。タイプ一致・タイプ相性は選んだポケモンから自動。乱数は16通り（85〜100%）。急所×1.5・やけど（物理）×0.5。</p>
+  </section>
+</main>
+
+<script>
+/* ===== データ：シングル使用率TOP50（シーズンM-3 / 2026-6-26時点・pokedb） ===== */
+const TYPE_JP = {normal:"ノーマル",fire:"ほのお",water:"みず",grass:"くさ",electric:"でんき",
+  ice:"こおり",fighting:"かくとう",poison:"どく",ground:"じめん",flying:"ひこう",psychic:"エスパー",
+  bug:"むし",rock:"いわ",ghost:"ゴースト",dragon:"ドラゴン",dark:"あく",steel:"はがね",fairy:"フェアリー"};
+const TYPE_COLOR = {normal:"#9099a1",fire:"#ff6b3d",water:"#4d90d5",grass:"#5dbe62",electric:"#f0c020",
+  ice:"#74cec0",fighting:"#cf4068",poison:"#aa5fa6",ground:"#d8765e",flying:"#8fa8dd",psychic:"#f8567f",
+  bug:"#90c12c",rock:"#c7b78b",ghost:"#5269ad",dragon:"#0a6dc4",dark:"#5a5366",steel:"#5a8ea1",fairy:"#ec8fe6"};
+
+// id=全国図鑑番号(通常画像用), form=PokeAPI特殊フォルム画像ID
+const P = [
+ {r:1,jp:"ガブリアス",id:445,t:["dragon","ground"],ab:["すながくれ","さめはだ(隠)"],s:[108,130,95,80,85,102],mv:["じしん","ドラゴンクロー","つるぎのまい","ステルスロック"],role:"環境の軸。広い技範囲と役割の広さ。剣舞エース/ステロ撒き。"},
+ {r:2,jp:"ミミッキュ",id:778,t:["ghost","fairy"],ab:["ばけのかわ"],s:[55,90,80,50,105,96],mv:["じゃれつく","シャドークロー","つるぎのまい","かげうち"],role:"ばけのかわで確実に起点化。いのちのたま＋剣舞で過去最高2位。"},
+ {r:3,jp:"マスカーニャ",id:908,t:["grass","dark"],ab:["しんりょく","へんげんじざい(隠)"],s:[76,110,70,81,70,123],mv:["トリックフラワー","はたきおとす","とんぼがえり","わるだくみ"],role:"高速物理。確定急所トリックフラワー＋とんぼで撹乱。"},
+ {r:4,jp:"ブリジュラス",id:1018,t:["steel","dragon"],ab:["スタミナ","がんじょう"],s:[90,105,130,125,65,85],mv:["ラスターカノン","りゅうせいぐん","でんじは","ボディプレス"],role:"高耐久＋高特攻の万能型。電気技/ボディプレスで起点不可。"},
+ {r:5,jp:"メタグロス",id:376,t:["steel","psychic"],ab:["クリアボディ"],s:[80,135,130,95,90,70],mv:["コメットパンチ","アイアンヘッド","じしん","しねんのずつき"],role:"【メガ新解禁】かたいツメで超火力。鋼エスパーの物理エース。"},
+ {r:6,jp:"ライチュウ",id:26,t:["electric"],ab:["せいでんき","ひらいしん(隠)"],s:[60,90,55,90,80,110],mv:["10まんボルト","なみのり","めざめるパワー","ボルトチェンジ"],role:"【メガ新解禁】高速の電気アタッカー。新メガで攻撃性能が大幅強化。"},
+ {r:7,jp:"ムクホーク",id:398,t:["normal","flying"],ab:["いかく","すてみ(隠)"],s:[85,120,70,50,60,100],mv:["ブレイブバード","インファイト","しんそく","とんぼがえり"],role:"【メガ新解禁】いかく＋ブレバの高速物理。ゴースト需要増の立役者。"},
+ {r:8,jp:"リザードン",id:6,t:["fire","flying"],ab:["もうか","サンパワー(隠)"],s:[78,84,78,109,85,100],mv:["かえんほうしゃ","エアスラッシュ","りゅうのはどう","ニトロチャージ"],role:"メガ進化枠。MXは竜物理/MYは日照特殊。雨対策で再評価。"},
+ {r:9,jp:"アーマーガア",id:823,t:["flying","steel"],ab:["プレッシャー","ミラーアーマー(隠)"],s:[98,87,105,53,85,67],mv:["ブレイブバード","ボディプレス","はねやすめ","ちょうはつ"],role:"物理受けの定番。羽休めで高耐久を維持。"},
+ {r:10,jp:"カバルドン",id:450,t:["ground"],ab:["すなおこし","すなのちから(隠)"],s:[108,112,118,68,72,47],mv:["じしん","ステルスロック","なまける","あくび"],role:"砂起こし＋高耐久の起点作り。あくびで流す。"},
+ {r:11,jp:"バシャーモ",id:257,t:["fire","fighting"],ab:["もうか","かそく(隠)"],s:[80,120,70,110,70,80],mv:["フレアドライブ","インファイト","まもる","つるぎのまい"],role:"【メガ】加速＋両刀。守る＋加速で素早さを上げ全抜き。"},
+ {r:12,jp:"アローラキュウコン",id:38,form:10206,t:["ice","fairy"],ab:["ゆきがくれ","ゆきふらし(隠)"],s:[73,67,75,81,100,109],mv:["ふぶき","ムーンフォース","フリーズドライ","オーロラベール"],role:"ゆきふらし始動＋オーロラベールの起点役。雨対策で評価上昇。"},
+ {r:13,jp:"ラグラージ",id:260,t:["water","ground"],ab:["げきりゅう","しめりけ(隠)"],s:[100,110,90,85,90,60],mv:["じしん","たきのぼり","れいとうパンチ","ステルスロック"],role:"【メガ】高耐久高火力。雨下では水技必中＋抜き性能。今期の雨軸。"},
+ {r:14,jp:"イダイトウ♂",id:902,t:["water","ghost"],ab:["てきおうりょく","かたやぶり(隠)"],s:[120,112,65,80,75,78],mv:["ウェーブタックル","たたりめ","アクアジェット","インファイト"],role:"適応力ウェーブタックルの超火力物理。"},
+ {r:15,jp:"アシレーヌ",id:730,t:["water","fairy"],ab:["げきりゅう","うるおいボイス(隠)"],s:[80,74,74,126,116,60],mv:["ムーンフォース","うたかたのアリア","ねっとう","アンコール"],role:"高特攻特殊アタッカー。みがわり貫通のアリアが強力。"},
+ {r:16,jp:"ギャラドス",id:130,t:["water","flying"],ab:["いかく","じしんかじょう(隠)"],s:[95,125,79,60,100,81],mv:["たきのぼり","じしん","りゅうのまい","アクアブレイク"],role:"いかく搭載の竜舞アタッカー。メガで超火力物理。"},
+ {r:17,jp:"サザンドラ",id:635,t:["dark","dragon"],ab:["ふゆう"],s:[92,105,90,125,90,98],mv:["あくのはどう","りゅうせいぐん","だいもんじ","わるだくみ"],role:"浮遊＋高特攻。悪巧みで突破力を上げる。"},
+ {r:18,jp:"キラフロル",id:970,t:["rock","poison"],ab:["どくげしょう","ゆうばく(隠)"],s:[83,55,90,130,81,86],mv:["パワージェム","ヘドロウェーブ","だいちのちから","ステルスロック"],role:"どくげしょうで毒菱撒き。高特攻の起点作り兼アタッカー。"},
+ {r:19,jp:"ウォッシュロトム",id:479,form:10009,t:["electric","water"],ab:["ふゆう"],s:[50,65,107,105,107,86],mv:["ハイドロポンプ","ボルトチェンジ","たたりめ","でんじは"],role:"浮遊耐久＋ボルチェン。電磁波で起点化。"},
+ {r:20,jp:"ペリッパー",id:279,t:["water","flying"],ab:["あめふらし","あめうけざら(隠)"],s:[60,50,100,95,70,65],mv:["ぼうふう","ハイドロポンプ","とんぼがえり","ねっとう"],role:"雨パの始動役。あめふらしで暴風必中。今期は雨軸で需要増。"},
+ {r:21,jp:"カイリュー",id:149,t:["dragon","flying"],ab:["せいしんりょく","マルチスケイル(隠)"],s:[91,134,95,100,100,80],mv:["しんそく","じしん","りゅうのまい","スケイルショット"],role:"マルチスケイル＋しんそく。竜舞物理が定番。"},
+ {r:22,jp:"オーロンゲ",id:861,t:["dark","fairy"],ab:["いたずらごころ","すりぬけ(隠)"],s:[95,120,65,95,75,60],mv:["イカサマ","リフレクター","ひかりのかべ","でんじは"],role:"いたずらごころで両壁＋電磁波を先制。起点作りの名手。"},
+ {r:23,jp:"サーフゴー",id:1000,t:["steel","ghost"],ab:["おうごんのからだ"],s:[87,60,95,133,91,84],mv:["ゴールドラッシュ","シャドーボール","わるだくみ","ねっとう"],role:"黄金の体で変化技無効。悪巧み＋高特攻で全抜き。"},
+ {r:24,jp:"マフォクシー",id:655,t:["fire","psychic"],ab:["もうか","マジシャン(隠)"],s:[75,69,72,114,100,104],mv:["かえんほうしゃ","サイコショック","めざめるパワー","おにび"],role:"高速の特殊アタッカー。広い技範囲。"},
+ {r:25,jp:"ドドゲザン",id:983,t:["dark","steel"],ab:["まけんき","プレッシャー(隠)"],s:[100,135,120,60,85,50],mv:["アイアンヘッド","ふいうち","はたきおとす","つるぎのまい"],role:"そうだいしょうで超火力。ふいうちで縛る物理。"},
+ {r:26,jp:"クチート",id:303,t:["steel","fairy"],ab:["かいりきバサミ","ちからずく(隠)"],s:[50,85,85,55,55,50],mv:["じゃれつく","ふいうち","アイアンヘッド","つるぎのまい"],role:"【メガ】ちからずくの超火力＋ふいうち。低速だが一撃が重い。"},
+ {r:27,jp:"ラウドボーン",id:911,t:["fire","ghost"],ab:["もうか","てんねん(隠)"],s:[104,75,100,110,75,66],mv:["かえんのうた","シャドーボール","おにび","なまける"],role:"てんねん＋かえんのうたで積みつつ受ける。"},
+ {r:28,jp:"ゲンガー",id:94,t:["ghost","poison"],ab:["のろわれボディ"],s:[60,65,60,130,75,110],mv:["シャドーボール","ヘドロばくだん","きあいだま","たたりめ"],role:"高速特殊アタッカー。メガで影踏み拘束。"},
+ {r:29,jp:"ドラミドロ",id:691,t:["poison","dragon"],ab:["どくのトゲ","てきおうりょく(隠)"],s:[65,75,90,97,123,44],mv:["ヘドロウェーブ","りゅうせいぐん","ハイドロポンプ","めざめるパワー"],role:"適応力の毒技＋高特防。低速の特殊受けアタッカー。"},
+ {r:30,jp:"ギルガルド",id:681,t:["steel","ghost"],ab:["バトルスイッチ"],s:[60,50,150,50,150,60],mv:["せいなるつるぎ","シャドークロー","アイアンヘッド","キングシールド"],role:"攻守を切替える両刀。シールド時は超耐久。"},
+ {r:31,jp:"ゲッコウガ",id:658,t:["water","dark"],ab:["げきりゅう","へんげんじざい(隠)"],s:[72,95,67,103,71,122],mv:["ハイドロポンプ","れいとうビーム","あくのはどう","みずしゅりけん"],role:"変幻自在の超高速特殊。先制水手裏剣も。"},
+ {r:32,jp:"ハッサム",id:212,t:["bug","steel"],ab:["むしのしらせ","テクニシャン(隠)"],s:[70,130,100,55,80,65],mv:["バレットパンチ","とんぼがえり","つるぎのまい","インファイト"],role:"先制バレットパンチ＋剣舞。テクニシャン補正。"},
+ {r:33,jp:"ヒスイダイケンキ",id:503,form:10236,t:["water","dark"],ab:["げきりゅう","するどいめ(隠)"],s:[90,108,100,100,65,85],mv:["せいなるつるぎ","ふいうち","アクアブレイク","つるぎのまい"],role:"きれあじ聖剣＋ふいうちの奇襲物理。"},
+ {r:34,jp:"ドラパルト",id:887,t:["dragon","ghost"],ab:["クリアボディ","のろわれボディ(隠)"],s:[88,120,75,100,75,142],mv:["ドラゴンアロー","ゴーストダイブ","とんぼがえり","りゅうのまい"],role:"環境最速級の両刀。竜舞物理や撹乱役で活躍。"},
+ {r:35,jp:"ミミロップ",id:428,t:["normal"],ab:["にげあし","せいしんりょく(隠)"],s:[65,76,84,54,96,105],mv:["とびひざげり","れいとうパンチ","グロウパンチ","はたきおとす"],role:"メガで格闘付与の高速物理。グロパンで全抜き。"},
+ {r:36,jp:"ウルガモス",id:637,t:["bug","fire"],ab:["ほのおのからだ","むしのしらせ(隠)"],s:[85,60,65,135,105,100],mv:["ちょうのまい","かえんほうしゃ","むしのさざめき","ギガドレイン"],role:"蝶の舞積みエース。高特攻＋そこそこ素早さ。"},
+ {r:37,jp:"スターミー",id:121,t:["water","psychic"],ab:["しぜんかいふく","アナライズ(隠)"],s:[60,75,85,100,85,115],mv:["ハイドロポンプ","れいとうビーム","サイコキネシス","でんこうせっか"],role:"高速特殊。メガで起点を作り全抜き。"},
+ {r:38,jp:"バイバニラ",id:584,t:["ice"],ab:["アイスボディ","ゆきふらし(隠)"],s:[71,95,85,110,95,79],mv:["ふぶき","フリーズドライ","ウェザーボール","こおりのつぶて"],role:"ゆきふらし始動＋ふぶき必中の特殊雪エース。雨対策で評価上昇。"},
+ {r:39,jp:"ソウブレイズ",id:937,t:["fire","ghost"],ab:["もらいび","きれあじ(隠)"],s:[75,125,80,60,100,85],mv:["むねんのつるぎ","かげうち","つるぎのまい","せいなるつるぎ"],role:"きれあじ補正の無念の剣＋影打ちの物理。"},
+ {r:40,jp:"メガニウム",id:154,t:["grass"],ab:["しんりょく","リーフガード(隠)"],s:[80,82,100,83,100,80],mv:["はなびらのまい","やどりぎのタネ","ひかりのかべ","アロマセラピー"],role:"高耐久のサポーター。壁＋宿木で場を整える。"},
+ {r:41,jp:"ブラッキー",id:197,t:["dark"],ab:["シンクロ","せいしんりょく(隠)"],s:[95,65,110,60,130,65],mv:["イカサマ","バトンタッチ","つきのひかり","どくどく"],role:"超高耐久受け。イカサマ＋月の光で居座る。"},
+ {r:42,jp:"オオニューラ",id:903,t:["fighting","poison"],ab:["プレッシャー","わるいてぐせ(隠)"],s:[80,130,60,40,80,120],mv:["インファイト","どくづき","つるぎのまい","はたきおとす"],role:"高速高火力の物理。剣舞からの全抜き。"},
+ {r:43,jp:"フシギバナ",id:3,t:["grass","poison"],ab:["しんりょく","ようりょくそ(隠)"],s:[80,82,83,100,100,80],mv:["ギガドレイン","ヘドロばくだん","やどりぎのタネ","ねむりごな"],role:"メガで高耐久。宿木＋眠り粉で崩す。"},
+ {r:44,jp:"カメックス",id:9,t:["water"],ab:["げきりゅう","メガランチャー(隠)"],s:[79,83,100,85,105,78],mv:["ハイドロポンプ","あくのはどう","れいとうビーム","だいちのちから"],role:"メガランチャーで波動技強化。耐久特殊。"},
+ {r:45,jp:"コノヨザル",id:979,t:["fighting","ghost"],ab:["まけんき","せいぎのこころ(隠)"],s:[110,115,80,50,90,90],mv:["ふんどのこぶし","ドレインパンチ","インファイト","ビルドアップ"],role:"ふんどのこぶしを積んで全抜き。高耐久の積みアタッカー。"},
+ {r:46,jp:"ルカリオ",id:448,t:["fighting","steel"],ab:["ふくつのこころ","せいしんりょく(隠)"],s:[70,110,70,115,70,90],mv:["インファイト","しんそく","はどうだん","つるぎのまい"],role:"物理/特殊の両刀。メガで適応力の超火力。"},
+ {r:47,jp:"ニンフィア",id:700,t:["fairy"],ab:["フェアリースキン","メロメロボディ(隠)"],s:[95,65,65,110,130,60],mv:["ハイパーボイス","シャドーボール","めざめるパワー","ねがいごと"],role:"フェアリースキンのハイパーボイスで全体的に削る。"},
+ {r:48,jp:"エルフーン",id:547,t:["grass","fairy"],ab:["いたずらごころ","すりぬけ(隠)"],s:[60,67,85,77,75,116],mv:["アンコール","おいかぜ","やどりぎのタネ","ムーンフォース"],role:"いたずらごころで先制サポート。追い風/アンコール。"},
+ {r:49,jp:"ヒートロトム",id:479,form:10008,t:["electric","fire"],ab:["ふゆう"],s:[50,65,107,105,107,86],mv:["オーバーヒート","ボルトチェンジ","たたりめ","おにび"],role:"浮遊耐久＋オバヒ。鬼火で物理を機能停止。"},
+ {r:50,jp:"マンムー",id:473,t:["ice","ground"],ab:["どんかん","あついしぼう(隠)"],s:[110,130,80,70,60,80],mv:["じしん","つららばり","こおりのつぶて","ステルスロック"],role:"氷地面の高火力物理。先制つぶてで削り。"},
+ {r:51,jp:"ハラバリー",id:939,t:["electric"],ab:["でんきにかえる","せいでんき(隠)"],s:[109,64,91,103,83,45],role:"でんきにかえるで高火力。耐久型の特殊アタッカー。"},
+ {r:52,jp:"バンギラス",id:248,t:["rock","dark"],ab:["すなおこし","きんちょうかん(隠)"],s:[100,134,110,95,100,61],role:"砂起こし＋高火力。メガでさらに重火力の物理。"},
+ {r:53,jp:"ドリュウズ",id:530,t:["ground","steel"],ab:["すなかき","かたやぶり(隠)"],s:[110,135,60,50,65,88],role:"砂かきで高速化＋高火力。地震／アイヘで殴る物理。"},
+ {r:54,jp:"マリルリ",id:184,t:["water","fairy"],ab:["ちからもち","そうしょく(隠)"],s:[100,50,80,60,80,50],role:"ちからもちで実質高火力。腹太鼓＋アクジェの抜き。"},
+ {r:55,jp:"ドヒドイデ",id:748,t:["poison","water"],ab:["さいせいりょく","じゅうなん(隠)"],s:[50,63,152,53,142,35],role:"再生力＋超高耐久の毒受け。自己再生で居座る。"},
+ {r:56,jp:"フラエッテ",id:670,t:["fairy"],ab:["フラワーベール"],s:[74,65,67,125,128,92],role:"高特防＋高特攻の特殊受けアタッカー。専用個体。"},
+ {r:57,jp:"ピクシー",id:36,t:["fairy"],ab:["マジックガード","てんねん(隠)"],s:[95,70,73,95,90,60],role:"マジックガード/てんねんで安定した耐久。"},
+ {r:58,jp:"ユキメノコ",id:478,t:["ice","ghost"],ab:["ゆきがくれ","のろいのからだ(隠)"],s:[70,80,70,80,70,110],role:"高速の氷ゴースト。オーロラベール＋吹雪。"},
+ {r:59,jp:"ヒスイゾロアーク",id:571,t:["normal","ghost"],ab:["イリュージョン"],s:[60,105,60,125,60,110],role:"他個体に化けて奇襲する高速特殊。"},
+ {r:60,jp:"クエスパトラ",id:956,t:["psychic"],ab:["きんしのちから","かそく(隠)"],s:[95,60,60,101,60,105],role:"加速＋ルミナコリジョンで起点化。加速バトンも。"},
+ {r:61,jp:"オニシズクモ",id:752,t:["water","bug"],ab:["すいほう","ねんちゃく(隠)"],s:[68,70,92,50,132,42],role:"すいほうで水技倍化＋高特防。ねばねばネット撒き。"},
+ {r:62,jp:"エアームド",id:227,t:["steel","flying"],ab:["がんじょう","ぼうじん(隠)"],s:[65,80,140,40,70,70],role:"高物理耐久の起点作り。ステロ＋吹き飛ばし。"},
+ {r:63,jp:"メタモン",id:132,t:["normal"],ab:["かわりもの","ちくでん(隠)"],s:[48,48,48,48,48,48],role:"相手に変身してコピー。こだわりスカーフ運用が主流。"},
+ {r:64,jp:"ミロカロス",id:350,t:["water"],ab:["ふしぎなうろこ","メロメロボディ(隠)"],s:[95,60,79,100,125,81],role:"高特防の水受け。自己再生＋熱湯で粘る。"},
+ {r:65,jp:"サーナイト",id:282,t:["psychic","fairy"],ab:["シンクロ","フェアリースキン(隠)"],s:[68,65,65,125,115,80],role:"高特攻の特殊。メガでフェアリースキン強化。"},
+ {r:66,jp:"カビゴン",id:143,t:["normal"],ab:["めんえき","あついしぼう(隠)"],s:[160,110,65,65,110,30],role:"超高耐久。地震＋あくびで起点や受けに。"},
+ {r:67,jp:"ジュカイン",id:254,t:["grass"],ab:["しんりょく","ようりょくそ(隠)"],s:[70,85,65,105,85,120],role:"高速の草。メガで草ドラゴンの超高速特殊に。"},
+ {r:68,jp:"シビルドン",id:604,t:["electric"],ab:["ふゆう"],s:[85,115,80,105,80,50],role:"浮遊で地面無効の両刀。とぐろ＋電気技。"},
+ {r:69,jp:"エルレイド",id:475,t:["psychic","fighting"],ab:["ふくつのこころ","せいしんりょく(隠)"],s:[68,125,65,65,115,80],role:"メガで高速高火力の物理。聖剣＋サイコカッター。"},
+ {r:70,jp:"ヤバソチャ",id:1013,t:["grass","ghost"],ab:["もてなし","たいねつ(隠)"],s:[71,60,106,121,80,70],role:"ちからをすいとる＋高特攻。瞑想で詰ませる。"},
+ {r:71,jp:"ジャローダ",id:497,t:["grass"],ab:["しんりょく","あまのじゃく(隠)"],s:[75,75,95,75,95,113],role:"あまのじゃくリーフストームで特攻を上げる高速。"},
+ {r:72,jp:"ガルーラ",id:115,t:["normal"],ab:["はやおき","きもったま(隠)"],s:[105,95,80,40,80,90],role:"メガ親子愛で2回攻撃。猫だまし＋冷凍パンチ。"},
+ {r:73,jp:"バサギリ",id:900,t:["bug","rock"],ab:["むしのしらせ","きれあじ(隠)"],s:[70,135,95,45,70,85],role:"がんせきアックスの高火力物理。追い風要員も。"},
+ {r:74,jp:"ガオガエン",id:727,t:["fire","dark"],ab:["もうか","いかく(隠)"],s:[95,115,90,80,90,60],role:"いかく＋DDラリアット。捨て台詞で対面操作。"},
+ {r:75,jp:"ヤミラミ",id:302,t:["dark","ghost"],ab:["するどいめ","いたずらごころ(隠)"],s:[50,75,75,65,65,50],role:"鬼火＋自己再生の起点。メガで超耐久の詰ませ。"},
+ {r:76,jp:"スコヴィラン",id:952,t:["grass","fire"],ab:["ようりょくそ","ムラっけ(隠)"],s:[65,108,65,108,65,75],role:"宿木＋炎の両刀受けアタッカー。日照で抜き。"},
+ {r:77,jp:"グレンアルマ",id:936,t:["fire","psychic"],ab:["もらいび","たいねつ(隠)"],s:[85,60,100,125,80,75],role:"アーマーキャノンの高火力特殊。サイフィ展開。"},
+ {r:78,jp:"ペンドラー",id:545,t:["bug","poison"],ab:["どくのトゲ","かそく(隠)"],s:[60,100,89,55,69,112],role:"加速で全抜き、または高速バトン要員。"},
+ {r:79,jp:"ブリムオン",id:858,t:["psychic","fairy"],ab:["いやしのこころ","マジックミラー(隠)"],s:[57,90,95,136,103,29],role:"超火力特殊。トリル下で全抜きする低速エース。"},
+ {r:80,jp:"ズルズキン",id:560,t:["dark","fighting"],ab:["だっぴ","いかく(隠)"],s:[65,90,115,45,115,58],role:"竜舞/ビルドアップ積みの高耐久物理。"},
+ {r:81,jp:"ホルード",id:660,t:["normal","ground"],ab:["ぶきよう","ちからもち(隠)"],s:[85,56,77,50,77,78],role:"ちからもちで実質高火力。先制電光石火も。"},
+ {r:82,jp:"ヤドラン",id:80,t:["water","psychic"],ab:["どんかん","さいせいりょく(隠)"],s:[95,75,110,100,80,30],role:"高耐久の受け。なまける＋瞑想。メガで超物理耐久。"},
+ {r:83,jp:"イッカネズミ",id:925,t:["normal"],ab:["フレンドガード","テクニシャン(隠)"],s:[74,75,70,65,75,111],role:"ネズミざん＋おかたづけ。3匹家族の変則アタッカー。"},
+ {r:84,jp:"ユキノオー",id:460,t:["grass","ice"],ab:["ゆきふらし","ぼうおん(隠)"],s:[90,92,75,92,85,60],role:"雪始動＋吹雪。メガで両刀高火力に。"},
+ {r:85,jp:"ジュペッタ",id:354,t:["ghost"],ab:["しめりけ","のろいのからだ(隠)"],s:[64,115,65,83,63,65],role:"みちづれ＋怨念。メガでいたずらごころの起点。"},
+ {r:86,jp:"ガメノデス",id:689,t:["rock","water"],ab:["すながくれ","シェルアーマー(隠)"],s:[72,105,115,54,86,68],role:"殻を破る＋格闘で全抜き。岩水の物理。"},
+ {r:87,jp:"ヒスイヌメルゴン",id:706,t:["steel","dragon"],ab:["そうしょく","シェルアーマー(隠)"],s:[80,100,100,110,150,60],role:"鋼ドラゴンの超高特防。たてこもる＋粘る受け。"},
+ {r:88,jp:"エンペルト",id:395,t:["water","steel"],ab:["げきりゅう","まけんき(隠)"],s:[84,86,88,111,101,60],role:"水鋼の高耐久特殊。ステロ＋羽休めで起点作り。"},
+ {r:89,jp:"ポットデス",id:855,t:["ghost"],ab:["くだけるよろい","のろいのからだ(隠)"],s:[60,65,65,134,114,70],role:"殻を破る＋バトンの起点。高特攻の積みアタッカー。"},
+ {r:90,jp:"シャンデラ",id:609,t:["ghost","fire"],ab:["もらいび","かげふみ(隠)"],s:[60,55,90,145,90,80],role:"高特攻のゴースト炎。影踏みで縛って全抜き。"},
+ {r:91,jp:"ビビヨン",id:666,t:["bug","flying"],ab:["りんぷん","フレンドガード(隠)"],s:[80,52,50,90,50,89],role:"眠り粉＋蝶の舞＋暴風。みがわりで起点化。"},
+ {r:92,jp:"ガラルヤドキング",id:199,t:["poison","psychic"],ab:["マイペース","さいせいりょく(隠)"],s:[95,65,80,110,110,30],role:"毒エスパーの高耐久特殊。毒技で受けを崩す。"},
+ {r:93,jp:"カエンジシ",id:668,t:["fire","normal"],ab:["いかく","ふくつのこころ(隠)"],s:[86,68,72,109,66,106],role:"高速の炎。オーバーヒート＋ニトロチャージで抜く。"},
+ {r:94,jp:"ドデカバシ",id:733,t:["normal","flying"],ab:["はとむね","スキルリンク(隠)"],s:[80,120,75,75,75,60],role:"くちばしキャノンの高火力物理。タネマシンガンも。"},
+ {r:95,jp:"ヒスイウインディ",id:59,t:["fire","rock"],ab:["いかく","そうしょく(隠)"],s:[95,115,80,95,80,90],role:"いかく＋神速＋諸刃の頭突きの高火力物理。"},
+ {r:96,jp:"グライオン",id:472,t:["ground","flying"],ab:["かいりきバサミ","ポイズンヒール(隠)"],s:[75,95,125,45,75,95],role:"毒ヒール＋高耐久。剣舞地震や毒どく撒きで居座る。"},
+ {r:97,jp:"ブリガロン",id:652,t:["grass","fighting"],ab:["しんりょく","ぼうだん(隠)"],s:[88,107,122,74,75,64],role:"ボディプレス＋光合成の高物理耐久。宿木で削る。"},
+ {r:98,jp:"ミミズズ",id:968,t:["steel"],ab:["どしょく","すながくれ(隠)"],s:[70,85,145,60,55,65],role:"超物理耐久の鋼。しっぽきり＋ステロの起点作り。"},
+ {r:99,jp:"ローブシン",id:534,t:["fighting"],ab:["こんじょう","てつのこぶし(隠)"],s:[105,140,95,55,65,45],role:"マッハパンチ＋鉄拳の高火力物理。根性で居座る。"},
+ {r:100,jp:"シャワーズ",id:134,t:["water"],ab:["みずのベール","うるおいボディ(隠)"],s:[130,65,60,110,95,65],role:"高HPの水。願い事＋熱湯で粘る耐久アタッカー。"},
+];
+const STAT_LABELS=["HP","攻","防","特攻","特防","素早"];
+P.forEach(p=>p.total=p.s.reduce((a,b)=>a+b,0));
+
+/* ===== メガ進化データ（メガ後：タイプ／特性／種族値） ===== */
+const MEGA = {
+ "メタグロス":[{nm:"メガメタグロス",t:["steel","psychic"],ab:["かたいツメ"],s:[80,145,150,105,110,110]}],
+ "ライチュウ":[{nm:"メガライチュウX",t:["electric"],ab:["エレキメイカー"],s:[60,135,95,90,95,110]},
+              {nm:"メガライチュウY",t:["electric"],ab:["ノーガード"],s:[60,100,55,160,80,130]}],
+ "ムクホーク":[{nm:"メガムクホーク",t:["fighting","flying"],ab:["あまのじゃく"],s:[85,140,100,60,90,110]}],
+ "バシャーモ":[{nm:"メガバシャーモ",t:["fire","fighting"],ab:["かそく"],s:[80,160,80,130,80,100]}],
+ "ラグラージ":[{nm:"メガラグラージ",t:["water","ground"],ab:["すいすい"],s:[100,150,110,95,110,70]}],
+ "クチート":[{nm:"メガクチート",t:["steel","fairy"],ab:["ちからもち"],s:[50,105,125,55,95,50]}],
+ "リザードン":[{nm:"メガリザードンX",t:["fire","dragon"],ab:["かたいあご"],s:[78,130,111,130,85,100]},
+              {nm:"メガリザードンY",t:["fire","flying"],ab:["ひでり"],s:[78,104,78,159,115,100]}],
+ "ギャラドス":[{nm:"メガギャラドス",t:["water","dark"],ab:["かたやぶり"],s:[95,155,109,70,130,81]}],
+ "ハッサム":[{nm:"メガハッサム",t:["bug","steel"],ab:["テクニシャン"],s:[70,150,140,65,100,75]}],
+ "ゲンガー":[{nm:"メガゲンガー",t:["ghost","poison"],ab:["かげふみ"],s:[60,65,80,170,95,130]}],
+ "フシギバナ":[{nm:"メガフシギバナ",t:["grass","poison"],ab:["あついしぼう"],s:[80,100,123,122,120,80]}],
+ "カメックス":[{nm:"メガカメックス",t:["water"],ab:["メガランチャー"],s:[79,103,120,135,115,78]}],
+ "ルカリオ":[{nm:"メガルカリオ",t:["fighting","steel"],ab:["てきおうりょく"],s:[70,145,88,140,70,112]}],
+ "ミミロップ":[{nm:"メガミミロップ",t:["normal","fighting"],ab:["きもったま"],s:[65,136,94,54,96,135]}],
+ "バンギラス":[{nm:"メガバンギラス",t:["rock","dark"],ab:["すなおこし"],s:[100,164,150,95,120,71]}],
+ "サーナイト":[{nm:"メガサーナイト",t:["psychic","fairy"],ab:["フェアリースキン"],s:[68,85,65,165,135,100]}],
+ "ジュカイン":[{nm:"メガジュカイン",t:["grass","dragon"],ab:["ひらいしん"],s:[70,110,75,145,85,145]}],
+ "エルレイド":[{nm:"メガエルレイド",t:["psychic","fighting"],ab:["ふくつのこころ"],s:[68,165,95,65,115,110]}],
+ "ガルーラ":[{nm:"メガガルーラ",t:["normal"],ab:["おやこあい"],s:[105,125,100,60,100,100]}],
+ "ヤミラミ":[{nm:"メガヤミラミ",t:["dark","ghost"],ab:["マジックミラー"],s:[50,85,125,85,115,20]}],
+ "ヤドラン":[{nm:"メガヤドラン",t:["water","psychic"],ab:["シェルアーマー"],s:[95,75,180,130,80,30]}],
+ "ユキノオー":[{nm:"メガユキノオー",t:["grass","ice"],ab:["ゆきふらし"],s:[90,132,105,132,105,30]}],
+ "ジュペッタ":[{nm:"メガジュペッタ",t:["ghost"],ab:["いたずらごころ"],s:[64,165,75,93,83,75]}],
+};
+P.forEach(p=>{ if(MEGA[p.jp]){ p.mega=MEGA[p.jp]; p.mega.forEach(m=>m.total=m.s.reduce((a,b)=>a+b,0)); }});
+
+/* ===== pokedbアイコン画像コード（順位→コード） ===== */
+const PCODE={1:"0445-00",2:"0778-00",3:"0908-00",4:"1018-00",5:"0376-00",6:"0026-00",7:"0398-00",8:"0006-00",9:"0823-00",10:"0450-00",11:"0257-00",12:"0038-01",13:"0260-00",14:"0902-00",15:"0730-00",16:"0130-00",17:"0635-00",18:"0970-00",19:"0479-02",20:"0279-00",21:"0149-00",22:"0861-00",23:"1000-00",24:"0655-00",25:"0983-00",26:"0303-00",27:"0911-00",28:"0094-00",29:"0691-00",30:"0681-00",31:"0658-00",32:"0212-00",33:"0503-01",34:"0887-00",35:"0428-00",36:"0637-00",37:"0121-00",38:"0584-00",39:"0937-00",40:"0154-00",41:"0197-00",42:"0903-00",43:"0003-00",44:"0009-00",45:"0979-00",46:"0448-00",47:"0700-00",48:"0547-00",49:"0479-01",50:"0473-00",51:"0939-00",52:"0248-00",53:"0530-00",54:"0184-00",55:"0748-00",56:"0670-05",57:"0036-00",58:"0478-00",59:"0571-01",60:"0956-00",61:"0752-00",62:"0227-00",63:"0132-00",64:"0350-00",65:"0282-00",66:"0143-00",67:"0254-00",68:"0604-00",69:"0475-00",70:"1013-00",71:"0497-00",72:"0115-00",73:"0900-00",74:"0727-00",75:"0302-00",76:"0952-00",77:"0936-00",78:"0545-00",79:"0858-00",80:"0560-00",81:"0660-00",82:"0080-00",83:"0925-00",84:"0460-00",85:"0354-00",86:"0689-00",87:"0706-01",88:"0395-00",89:"0855-00",90:"0609-00",91:"0666-18",92:"0199-01",93:"0668-00",94:"0733-00",95:"0059-01",96:"0472-00",97:"0652-00",98:"0968-00",99:"0534-00",100:"0134-00"};
+
+/* ===== 採用技トップ10（シーズンM-3・pokedb / [技名,採用率%]） ===== */
+const MOVES={
+ 1:[["じしん",99.5],["げきりん",47.9],["ステルスロック",47.7],["がんせきふうじ",35.5],["スケイルショット",31.0],["つるぎのまい",23.3],["ドラゴンテール",22.5],["いわなだれ",19.2],["どくづき",16.1],["まきびし",15.3]],
+ 2:[["かげうち",96.0],["じゃれつく",95.7],["つるぎのまい",80.0],["シャドークロー",62.0],["のろい",15.5],["トリックルーム",13.6],["ドレインパンチ",12.4],["ウッドハンマー",11.9],["おにび",3.0],["みちづれ",2.3]],
+ 3:[["トリックフラワー",98.2],["トリプルアクセル",89.3],["とんぼがえり",71.9],["はたきおとす",68.6],["ふいうち",15.7],["かみなりパンチ",14.0],["じゃれつく",9.7],["かわらわり",4.1],["トリック",4.0],["けたぐり",4.0]],
+ 4:[["ラスターカノン",74.9],["りゅうせいぐん",71.5],["１０まんボルト",48.9],["ステルスロック",38.6],["エレクトロビーム",38.2],["はどうだん",28.0],["ミラーコート",16.2],["ドラゴンテール",15.8],["ほえる",12.6],["りゅうのはどう",10.3]],
+ 5:[["サイコファング",86.4],["バレットパンチ",80.8],["じしん",75.3],["れいとうパンチ",59.3],["かみなりパンチ",26.9],["アイアンヘッド",26.0],["コメットパンチ",22.6],["くさわけ",4.7],["くさむすび",2.7],["アームハンマー",2.0]],
+ 6:[["でんじほう",96.1],["きあいだま",95.5],["くさむすび",75.5],["ボルトチェンジ",26.3],["みがわり",21.8],["みわくのボイス",14.9],["アンコール",10.6],["ねこだまし",10.5],["わるだくみ",10.0],["マジカルシャイン",8.3]],
+ 7:[["インファイト",98.3],["ブレイブバード",91.4],["はねやすめ",90.3],["ブレイズキック",53.7],["ふきとばし",16.5],["とんぼがえり",14.9],["でんこうせっか",6.2],["みがわり",5.9],["ダブルウイング",5.8],["いのちがけ",4.7]],
+ 8:[["ソーラービーム",72.6],["オーバーヒート",41.0],["エアスラッシュ",40.6],["かえんほうしゃ",39.7],["ニトロチャージ",38.1],["ウェザーボール",30.1],["フレアドライブ",23.3],["はねやすめ",19.6],["りゅうのまい",15.4],["ドラゴンクロー",14.3]],
+ 9:[["はねやすめ",99.5],["ボディプレス",75.0],["とんぼがえり",74.8],["てっぺき",69.7],["アイアンヘッド",26.8],["ビルドアップ",14.3],["ブレイブバード",13.7],["きりばらい",10.2],["ちょうはつ",8.9],["つけあがる",4.0]],
+ 10:[["じしん",98.0],["あくび",94.1],["ステルスロック",89.2],["なまける",57.5],["ふきとばし",39.4],["まもる",7.6],["ほえる",6.0],["がんせきふうじ",1.8],["こおりのキバ",1.7],["じわれ",1.0]],
+ 11:[["フレアドライブ",79.7],["インファイト",63.6],["まもる",57.8],["つるぎのまい",51.1],["かみなりパンチ",35.2],["とびひざげり",20.2],["みきり",18.4],["バトンタッチ",18.2],["じしん",7.4],["ビルドアップ",6.4]],
+ 12:[["オーロラベール",97.6],["フリーズドライ",85.1],["ふぶき",74.4],["アンコール",53.0],["ムーンフォース",52.7],["いたみわけ",8.2],["ミストフィールド",7.7],["わるだくみ",4.4],["こおりのつぶて",3.5],["バトンタッチ",1.2]],
+ 13:[["じしん",92.8],["ウェーブタックル",75.4],["れいとうパンチ",72.8],["クイックターン",64.5],["ステルスロック",21.4],["あくび",20.3],["ビルドアップ",7.0],["はたきおとす",6.6],["みがわり",5.1],["どくづき",3.6]],
+ 14:[["おはかまいり",99.8],["ウェーブタックル",96.9],["アクアジェット",96.6],["クイックターン",71.7],["こうそくいどう",15.6],["みがわり",3.6],["アクアブレイク",3.4],["もろはのずつき",3.2],["がむしゃら",2.2],["こおりのキバ",1.7]],
+ 15:[["ムーンフォース",96.9],["うたかたのアリア",86.5],["アクアジェット",67.3],["アンコール",40.6],["めいそう",27.6],["クイックターン",26.4],["れいとうビーム",9.0],["エナジーボール",8.9],["なみのり",8.8],["サイコノイズ",3.5]],
+ 16:[["たきのぼり",90.4],["りゅうのまい",62.0],["じしん",59.8],["パワーウィップ",56.8],["こおりのキバ",39.9],["ちょうはつ",35.3],["ゆきなだれ",27.9],["かみくだく",8.0],["でんじは",5.2],["やけっぱち",4.3]],
+ 17:[["あくのはどう",99.4],["りゅうせいぐん",92.9],["とんぼがえり",72.0],["かえんほうしゃ",62.9],["だいもんじ",18.8],["ラスターカノン",10.2],["きあいだま",10.0],["だいちのちから",7.7],["わるだくみ",6.9],["ちょうはつ",5.5]],
+ 18:[["パワージェム",85.7],["ヘドロウェーブ",59.9],["だいちのちから",59.6],["ステルスロック",53.9],["マッドショット",32.0],["エナジーボール",29.6],["キラースピン",25.2],["ニードルガード",14.8],["ヘドロばくだん",8.4],["どくどく",6.1]],
+ 19:[["ハイドロポンプ",98.8],["ボルトチェンジ",91.5],["おにび",87.5],["１０まんボルト",51.5],["いたみわけ",27.7],["トリック",13.7],["ほうでん",5.7],["わるだくみ",3.0],["ひかりのかべ",3.0],["イカサマ",2.7]],
+ 20:[["ぼうふう",98.7],["とんぼがえり",98.1],["れいとうビーム",72.4],["なみのり",55.7],["ウェザーボール",34.4],["はねやすめ",14.7],["おいかぜ",9.2],["ハイドロポンプ",6.6],["こごえるかぜ",2.9],["あまごい",2.1]],
+ 21:[["りゅうせいぐん",59.2],["しんそく",55.3],["エアスラッシュ",44.6],["１０まんボルト",38.9],["かえんほうしゃ",35.7],["はねやすめ",31.3],["じしん",21.6],["れいとうビーム",19.8],["りゅうのまい",19.7],["げきりん",15.5]],
+ 22:[["ソウルクラッシュ",79.8],["すてゼリフ",77.4],["リフレクター",76.6],["ひかりのかべ",71.5],["ちょうはつ",29.8],["ねこだまし",24.1],["イカサマ",14.1],["ふいうち",13.4],["じゃれつく",7.0],["ビルドアップ",0.6]],
+ 23:[["シャドーボール",98.5],["ゴールドラッシュ",85.0],["わるだくみ",52.2],["じこさいせい",42.7],["トリック",34.7],["１０まんボルト",28.4],["パワージェム",14.3],["きあいだま",10.8],["みがわり",6.8],["ラスターカノン",6.5]],
+ 24:[["かえんほうしゃ",64.5],["わるだくみ",55.5],["サイコショック",52.0],["サイコキネシス",40.4],["アンコール",37.7],["マジカルフレイム",28.1],["みがわり",27.2],["マジカルシャイン",25.2],["おにび",17.1],["くさむすび",12.9]],
+ 25:[["ふいうち",99.4],["ドゲザン",97.7],["アイアンヘッド",92.7],["つるぎのまい",77.3],["けたぐり",13.9],["かわらわり",7.1],["ハサミギロチン",5.1],["メタルバースト",1.9],["まもる",1.1],["ストーンエッジ",1.1]],
+ 26:[["ふいうち",98.9],["じゃれつく",98.8],["つるぎのまい",86.7],["アイアンヘッド",34.1],["ほのおのキバ",26.6],["はたきおとす",24.5],["かみなりパンチ",16.6],["かわらわり",3.9],["れいとうパンチ",2.2],["サイコファング",1.9]],
+ 27:[["フレアソング",99.4],["なまける",98.7],["おにび",82.7],["シャドーボール",50.4],["たたりめ",38.9],["あくび",12.9],["みわくのボイス",2.9],["もえつきる",2.7],["みがわり",2.4],["だいちのちから",2.3]],
+ 28:[["ヘドロウェーブ",86.7],["シャドーボール",76.2],["こごえるかぜ",48.5],["みちづれ",45.9],["おにび",24.3],["きあいだま",23.7],["たたりめ",22.4],["１０まんボルト",13.1],["まもる",10.0],["ヘドロばくだん",7.0]],
+ 29:[["クイックターン",80.0],["りゅうせいぐん",79.7],["どくどく",43.9],["ヘドロウェーブ",41.5],["どくびし",37.6],["１０まんボルト",31.5],["ヘドロばくだん",29.3],["ねっとう",14.3],["くろいきり",5.8],["りゅうのはどう",5.4]],
+ 30:[["かげうち",97.1],["キングシールド",80.3],["ポルターガイスト",75.0],["せいなるつるぎ",39.1],["つるぎのまい",35.2],["シャドーボール",21.5],["アイアンヘッド",21.3],["インファイト",17.5],["ラスターカノン",9.4],["シャドークロー",0.5]],
+ 31:[["れいとうビーム",90.3],["あくのはどう",72.8],["ヘドロウェーブ",64.7],["みずしゅりけん",39.9],["なみのり",39.0],["くさむすび",23.8],["ハイドロポンプ",17.7],["マッドショット",13.2],["ちょうはつ",5.6],["どくびし",5.3]],
+ 32:[["バレットパンチ",100.0],["つるぎのまい",87.8],["インファイト",63.9],["はたきおとす",55.7],["とんぼがえり",28.8],["はねやすめ",26.4],["ダブルウイング",14.4],["むしくい",5.7],["くさわけ",3.1],["かわらわり",2.9]],
+ 33:[["ひけん・ちえなみ",99.9],["せいなるつるぎ",85.8],["シェルブレード",72.5],["ふいうち",64.7],["クイックターン",21.5],["アンコール",17.9],["アクアジェット",9.5],["アクアカッター",9.2],["れいとうビーム",7.5],["しんくうは",3.3]],
+ 34:[["ドラゴンアロー",51.3],["ゴーストダイブ",31.0],["ふいうち",28.3],["りゅうせいぐん",28.3],["とんぼがえり",28.1],["おにび",27.9],["シャドーボール",26.8],["ひかりのかべ",23.7],["リフレクター",22.6],["のろい",21.5]],
+ 35:[["ねこだまし",72.1],["インファイト",50.1],["トリプルアクセル",48.2],["とびひざげり",45.4],["マッハパンチ",36.8],["つるぎのまい",35.0],["メガトンキック",22.6],["とんぼがえり",19.4],["れいとうパンチ",15.9],["ギガインパクト",13.1]],
+ 36:[["ちょうのまい",95.5],["ほのおのまい",80.5],["ギガドレイン",69.2],["あさのひざし",58.4],["むしのさざめき",38.1],["おにび",18.8],["マジカルフレイム",11.0],["サイコキネシス",7.5],["かえんほうしゃ",6.5],["みがわり",4.4]],
+ 37:[["アクアブレイク",89.5],["アクアジェット",87.6],["アイススピナー",69.5],["クイックターン",62.0],["しねんのずつき",34.7],["サイコカッター",22.1],["ビルドアップ",8.7],["１０まんボルト",5.6],["じこさいせい",2.9],["くさむすび",2.7]],
+ 38:[["フリーズドライ",99.2],["ふぶき",94.9],["こおりのつぶて",87.9],["オーロラベール",53.6],["ちょうはつ",37.3],["ぜったいれいど",15.2],["ミラーコート",5.2],["だいばくはつ",2.3],["こごえるかぜ",0.8],["ひやみず",0.8]],
+ 39:[["かげうち",95.5],["ポルターガイスト",91.8],["つるぎのまい",86.1],["むねんのつるぎ",82.4],["インファイト",32.1],["みちづれ",6.1],["ビルドアップ",1.4],["ちょうはつ",1.4],["おにび",0.7],["ひかりのかべ",0.4]],
+ 40:[["ソーラービーム",97.8],["ウェザーボール",95.3],["マジカルシャイン",74.9],["こうごうせい",73.3],["だいちのちから",21.2],["みがわり",14.8],["くさわけ",8.4],["やどりぎのタネ",4.1],["げんしのちから",3.4],["ギガドレイン",1.5]],
+ 41:[["イカサマ",95.5],["まもる",82.9],["ねがいごと",80.3],["あくび",51.7],["どくどく",46.7],["つきのひかり",16.7],["みきり",3.9],["ちょうはつ",3.7],["バトンタッチ",2.4],["バークアウト",2.2]],
+ 42:[["インファイト",99.7],["フェイタルクロー",98.5],["じごくづき",47.3],["つるぎのまい",37.9],["ねこだまし",36.8],["とんぼがえり",17.8],["アクロバット",11.4],["シャドークロー",9.5],["いわなだれ",6.7],["ちょうはつ",5.1]],
+ 43:[["だいちのちから",92.9],["ギガドレイン",74.4],["こうごうせい",67.4],["ヘドロばくだん",49.8],["やどりぎのタネ",49.1],["ヘドロウェーブ",24.5],["どくどく",9.1],["アシッドボム",7.9],["ねむりごな",7.0],["リーフストーム",3.6]],
+ 44:[["はどうだん",89.8],["みずのはどう",80.2],["からをやぶる",79.6],["あくのはどう",77.8],["れいとうビーム",24.1],["アクアジェット",12.6],["なみのり",7.3],["ハイドロポンプ",6.3],["ミラーコート",4.4],["しおふき",3.9]],
+ 45:[["ふんどのこぶし",98.9],["ドレインパンチ",87.7],["ビルドアップ",71.2],["ちょうはつ",61.0],["ステルスロック",22.6],["れいとうパンチ",9.0],["アンコール",8.5],["がんせきふうじ",6.7],["インファイト",6.2],["なげつける",3.7]],
+ 46:[["インファイト",55.4],["しんくうは",41.3],["バレットパンチ",41.0],["はどうだん",37.0],["コメットパンチ",35.8],["ラスターカノン",35.3],["つるぎのまい",34.1],["わるだくみ",22.6],["しんそく",20.9],["てっていこうせん",15.5]],
+ 47:[["ハイパーボイス",96.5],["あくび",71.5],["でんこうせっか",53.0],["マジカルフレイム",51.9],["まもる",30.3],["ねがいごと",27.2],["めいそう",26.3],["シャドーボール",10.5],["はかいこうせん",6.1],["ねむる",5.9]],
+ 48:[["ムーンフォース",93.6],["アンコール",69.9],["おいかぜ",50.2],["やどりぎのタネ",43.1],["みがわり",28.5],["おきみやげ",25.9],["がむしゃら",25.7],["コットンガード",13.2],["ギガドレイン",9.8],["まもる",8.4]],
+ 49:[["オーバーヒート",96.6],["ボルトチェンジ",93.6],["おにび",71.8],["１０まんボルト",47.5],["トリック",22.8],["いたみわけ",16.8],["イカサマ",14.9],["わるだくみ",5.7],["でんじは",5.4],["ほうでん",5.4]],
+ 50:[["じしん",99.5],["こおりのつぶて",96.7],["つららばり",54.8],["ステルスロック",40.6],["がんせきふうじ",36.7],["つららおとし",32.9],["がむしゃら",16.2],["いわなだれ",6.1],["ストーンエッジ",3.3],["フリーズドライ",3.2]],
+ 51:[["なまける",94.6],["パラボラチャージ",93.4],["ボルトチェンジ",70.4],["どくどく",69.2],["みずびたし",61.5],["アシッドボム",3.4],["ふいうち",1.3],["かいでんぱ",1.2],["マッドショット",0.8],["でんじは",0.8]],
+ 52:[["はたきおとす",71.8],["ステルスロック",48.9],["じしん",45.2],["ストーンエッジ",41.4],["れいとうパンチ",29.7],["りゅうのまい",25.6],["がんせきふうじ",23.7],["いわなだれ",11.7],["ロックブラスト",9.9],["かみくだく",7.9]],
+ 53:[["じしん",97.8],["アイアンヘッド",97.4],["いわなだれ",64.8],["つるぎのまい",34.2],["つのドリル",31.1],["がんせきふうじ",20.2],["こうそくスピン",14.3],["ステルスロック",11.1],["かわらわり",9.0],["じごくづき",5.9]],
+ 54:[["アクアジェット",95.7],["じゃれつく",95.1],["はらだいこ",67.6],["アクアブレイク",53.2],["ばかぢから",49.0],["かわらわり",6.7],["はたきおとす",5.6],["ほろびのうた",4.8],["アイススピナー",4.7],["アンコール",3.5]],
+ 55:[["じこさいせい",98.8],["どくどく",89.2],["まとわりつく",55.9],["トーチカ",54.5],["くろいきり",43.4],["しっぺがえし",13.5],["どくびし",11.2],["アクアブレイク",8.4],["どくづき",5.0],["ひやみず",3.3]],
+ 56:[["ムーンフォース",84.4],["めいそう",82.3],["ドレインキッス",69.9],["はめつのひかり",55.9],["サイコキネシス",46.4],["こうごうせい",15.1],["みがわり",9.5],["くさわけ",5.4],["トリック",5.4],["ミストフィールド",5.4]],
+ 57:[["つきのひかり",85.2],["ムーンフォース",81.0],["コスモパワー",64.6],["アシストパワー",44.9],["かえんほうしゃ",25.9],["めいそう",24.0],["バトンタッチ",12.9],["ステルスロック",6.9],["マジカルフレイム",6.8],["でんじは",5.9]],
+ 58:[["ふぶき",98.1],["シャドーボール",83.6],["オーロラベール",67.6],["１０まんボルト",58.5],["わるだくみ",17.6],["みちづれ",15.5],["おにび",13.3],["こおりのつぶて",12.7],["ちょうはつ",8.5],["たたりめ",8.3]],
+ 59:[["こごえるかぜ",70.9],["うらみつらみ",59.1],["かえんほうしゃ",43.9],["シャドーボール",40.2],["おきみやげ",30.4],["きあいだま",29.7],["かげうち",19.4],["ちょうはつ",16.1],["おにび",11.6],["ハイパーボイス",11.6]],
+ 60:[["ルミナコリジョン",88.5],["まもる",75.0],["バトンタッチ",71.4],["めいそう",61.7],["マジカルシャイン",37.8],["シャドーボール",17.5],["みがわり",13.8],["リフレクター",7.2],["エナジーボール",6.5],["ひかりのかべ",6.2]],
+ 61:[["ねばねばネット",98.6],["ミラーコート",89.7],["アクアブレイク",81.2],["とびかかる",36.4],["とびつく",19.9],["なみのり",17.2],["こごえるかぜ",11.9],["がむしゃら",10.8],["きゅうけつ",7.8],["こわいかお",7.1]],
+ 62:[["はねやすめ",64.0],["ブレイブバード",46.2],["ステルスロック",44.5],["ふきとばし",40.5],["つるぎのまい",32.3],["アイアンヘッド",31.9],["ボディプレス",28.2],["ドリルライナー",27.3],["ちょうはつ",25.7],["まきびし",22.9]],
+ 63:[["へんしん",100.0]],
+ 64:[["ねっとう",94.3],["じこさいせい",94.1],["ミラーコート",64.6],["れいとうビーム",53.1],["くろいきり",48.1],["とぐろをまく",5.8],["みわくのボイス",5.7],["みがわり",5.4],["こごえるかぜ",4.8],["クイックターン",3.7]],
+ 65:[["しんくうは",74.1],["ハイパーボイス",68.8],["１０まんボルト",43.2],["サイコショック",38.6],["マジカルフレイム",30.8],["ムーンフォース",30.1],["めいそう",23.9],["サイコキネシス",23.9],["サイコノイズ",19.3],["エナジーボール",12.2]],
+ 66:[["じしん",68.3],["あくび",48.1],["れいとうパンチ",39.3],["のしかかり",27.6],["じわれ",26.9],["ねむる",25.9],["じばく",21.0],["まもる",18.3],["すてみタックル",17.8],["ヒートスタンプ",17.2]],
+ 67:[["だいちのちから",86.8],["りゅうのはどう",81.5],["リーフストーム",66.1],["しんくうは",46.3],["しっぽきり",32.9],["エナジーボール",26.0],["がむしゃら",9.6],["きあいだま",9.5],["みがわり",4.6],["ギガドレイン",4.1]],
+ 68:[["サンダーダイブ",52.1],["ドレインパンチ",49.7],["とぐろをまく",41.6],["１０まんボルト",37.6],["かえんほうしゃ",32.3],["ギガドレイン",31.3],["りゅうのはどう",22.4],["くさむすび",18.3],["アクアブレイク",16.7],["ボルトチェンジ",12.2]],
+ 69:[["せいなるつるぎ",99.5],["サイコカッター",88.7],["リーフブレード",87.3],["かげうち",54.4],["トリプルアクセル",25.1],["つじぎり",22.8],["かみなりパンチ",6.7],["トリックルーム",3.4],["アクアカッター",3.2],["いわなだれ",1.8]],
+ 70:[["シャカシャカほう",94.7],["ちからをすいとる",94.4],["シャドーボール",81.4],["めいそう",62.0],["ねっとう",15.8],["トリックルーム",11.5],["たたりめ",6.7],["のろい",6.4],["おきみやげ",6.3],["ギガドレイン",3.1]],
+ 71:[["リーフストーム",100.0],["へびにらみ",64.0],["りゅうのはどう",47.9],["ちょうはつ",45.2],["やどりぎのタネ",28.9],["こうごうせい",20.6],["みがわり",18.7],["リフレクター",17.3],["ひかりのかべ",12.0],["ギガドレイン",10.0]],
+ 72:[["れいとうパンチ",84.5],["じしん",73.1],["すてみタックル",64.2],["ねこだまし",47.7],["ふいうち",46.2],["ほのおのパンチ",25.9],["のしかかり",23.4],["いわなだれ",6.8],["かみなりパンチ",6.1],["かわらわり",3.0]],
+ 73:[["がんせきアックス",100.0],["シザークロス",76.2],["インファイト",57.5],["つじぎり",30.2],["フェイント",27.5],["でんこうせっか",26.6],["おいかぜ",24.3],["とんぼがえり",22.8],["つるぎのまい",10.6],["かわらわり",7.2]],
+ 74:[["フレアドライブ",79.7],["すてゼリフ",74.8],["ＤＤラリアット",74.2],["ねこだまし",34.9],["おにび",34.3],["ちょうはつ",17.4],["バトンタッチ",10.5],["ビルドアップ",9.9],["にほんばれ",8.3],["つるぎのまい",6.9]],
+ 75:[["おにび",74.0],["イカサマ",66.7],["じこさいせい",63.5],["アンコール",40.3],["ひかりのかべ",29.6],["リフレクター",28.6],["めいそう",22.5],["ちょうはつ",19.0],["たたりめ",7.8],["メタルバースト",6.1]],
+ 76:[["やどりぎのタネ",88.1],["まもる",85.0],["かえんほうしゃ",78.4],["ギガドレイン",63.1],["みがわり",30.7],["しっとのほのお",14.6],["リーフストーム",8.2],["エナジーボール",7.5],["オーバーヒート",3.8],["いかりのこな",3.7]],
+ 77:[["アーマーキャノン",98.9],["みちづれ",59.8],["サイコフィールド",51.6],["ワイドフォース",49.9],["サイコキネシス",41.7],["エナジーボール",30.1],["はどうだん",21.1],["こらえる",18.9],["サイコショック",7.8],["トリックルーム",7.2]],
+ 78:[["じしん",66.2],["つるぎのまい",62.2],["まもる",49.5],["バトンタッチ",46.4],["きゅうけつ",41.4],["てっぺき",29.5],["ダストシュート",25.9],["どくづき",15.4],["どくどく",13.7],["みがわり",13.2]],
+ 79:[["トリックルーム",77.6],["マジカルフレイム",62.0],["ミストバースト",57.0],["サイコキネシス",42.4],["サイコショック",25.4],["ドレインキッス",25.4],["めいそう",24.9],["いやしのねがい",21.0],["マジカルシャイン",17.4],["ギガドレイン",11.1]],
+ 80:[["ドレインパンチ",83.8],["はたきおとす",65.0],["りゅうのまい",39.7],["れいとうパンチ",33.6],["ビルドアップ",30.1],["どくづき",24.0],["じごくづき",18.6],["つるぎのまい",15.7],["ちょうはつ",13.8],["かみなりパンチ",13.1]],
+ 81:[["じしん",100.0],["でんこうせっか",89.3],["れいとうパンチ",85.8],["かみなりパンチ",52.7],["がんせきふうじ",14.8],["じたばた",11.5],["ダストシュート",7.2],["ほのおのパンチ",6.8],["いわなだれ",5.8],["とんぼがえり",5.2]],
+ 82:[["ねっとう",85.4],["なまける",85.2],["てっぺき",50.5],["ボディプレス",36.5],["めいそう",24.7],["れいとうビーム",21.1],["かえんほうしゃ",15.1],["あくび",13.2],["サイコキネシス",10.3],["トリックルーム",8.9]],
+ 83:[["ネズミざん",96.8],["おかたづけ",87.5],["アンコール",63.2],["かみつく",51.7],["タネマシンガン",26.5],["バトンタッチ",19.7],["ちょうはつ",8.4],["いかりのまえば",5.6],["じゃれつく",4.4],["かみくだく",4.2]],
+ 84:[["ふぶき",96.6],["こおりのつぶて",76.9],["ギガドレイン",67.7],["だいちのちから",54.1],["オーロラベール",27.4],["やどりぎのタネ",23.8],["リーフストーム",13.8],["エナジーボール",10.1],["ぜったいれいど",6.9],["じしん",3.7]],
+ 85:[["みちづれ",99.7],["ポルターガイスト",97.2],["アンコール",71.9],["かげうち",65.9],["ダストシュート",21.0],["ちょうはつ",18.1],["おにび",9.0],["ふいうち",5.9],["みがわり",2.4],["いたみわけ",2.2]],
+ 86:[["からをやぶる",99.5],["インファイト",97.3],["ロックブラスト",47.1],["じしん",41.0],["アクアブレイク",36.3],["いわなだれ",18.6],["ストーンエッジ",15.9],["どくづき",14.7],["つじぎり",8.3],["シャドークロー",7.8]],
+ 87:[["ラスターカノン",60.6],["たてこもる",41.7],["１０まんボルト",38.3],["りゅうせいぐん",37.4],["ボディプレス",34.3],["れいとうビーム",29.0],["アシッドボム",25.9],["かえんほうしゃ",24.5],["ヘビーボンバー",15.9],["りゅうのはどう",13.5]],
+ 88:[["なみのり",69.1],["あくび",60.1],["ステルスロック",59.7],["れいとうビーム",55.6],["クイックターン",42.6],["しんくうは",32.4],["ラスターカノン",23.1],["くさむすび",18.7],["はねやすめ",8.9],["ハイドロポンプ",7.2]],
+ 89:[["からをやぶる",100.0],["シャドーボール",92.9],["バトンタッチ",74.4],["ちからをすいとる",65.7],["アシストパワー",39.8],["ギガドレイン",19.4],["ふいうち",3.8],["サイコショック",1.4],["はかいこうせん",1.4],["のろい",0.4]],
+ 90:[["シャドーボール",93.1],["かえんほうしゃ",63.4],["オーバーヒート",34.8],["エナジーボール",33.6],["トリック",23.9],["おにび",21.7],["トリックルーム",20.0],["のろい",18.7],["めいそう",17.8],["サイコキネシス",13.0]],
+ 91:[["ねむりごな",100.0],["ちょうのまい",98.1],["ぼうふう",97.0],["みがわり",93.5],["むしのさざめき",4.8],["ギガドレイン",1.6],["エアスラッシュ",1.4],["おいかぜ",1.2],["サイコキネシス",1.0],["まもる",0.4]],
+ 92:[["かえんほうしゃ",55.3],["なまける",55.2],["さむいギャグ",48.7],["どくどく",36.9],["ヘドロばくだん",27.6],["れいとうビーム",25.5],["めいそう",23.5],["サイコノイズ",17.9],["サイコショック",13.7],["ヘドロウェーブ",12.8]],
+ 93:[["かえんほうしゃ",87.0],["オーバーヒート",71.5],["ハイパーボイス",52.7],["ねっさのだいち",45.8],["ニトロチャージ",40.8],["あくび",16.8],["ちょうはつ",13.8],["あくのはどう",13.3],["おにび",12.9],["はかいこうせん",8.2]],
+ 94:[["くちばしキャノン",100.0],["タネマシンガン",76.5],["ロックブラスト",62.3],["はねやすめ",56.7],["アンコール",51.3],["とんぼがえり",20.2],["はたきおとす",15.6],["まもる",3.1],["やけっぱち",3.1],["からげんき",2.8]],
+ 95:[["フレアドライブ",98.5],["もろはのずつき",92.4],["しんそく",64.7],["インファイト",43.7],["ワイルドボルト",35.8],["ステルスロック",21.4],["あさのひざし",9.9],["げきりん",8.2],["がんせきふうじ",5.3],["おにび",4.3]],
+ 96:[["じしん",86.7],["ステルスロック",39.7],["ダブルウイング",39.7],["どくどく",33.9],["とんぼがえり",32.5],["つるぎのまい",22.0],["まもる",18.8],["がんせきふうじ",14.8],["パワーウィップ",14.8],["みがわり",14.5]],
+ 97:[["ボディプレス",87.0],["こうごうせい",68.5],["てっぺき",63.8],["やどりぎのタネ",41.7],["じしん",32.3],["ニードルガード",21.5],["ウッドハンマー",19.2],["タネばくだん",15.8],["はたきおとす",14.7],["ドレインパンチ",11.7]],
+ 98:[["しっぽきり",99.4],["ボディプレス",92.8],["ステルスロック",80.4],["てっぺき",39.0],["ヘビーボンバー",26.2],["アイアンヘッド",15.2],["メタルバースト",14.3],["じならし",6.1],["がんせきふうじ",5.9],["じしん",5.3]],
+ 99:[["マッハパンチ",93.5],["ドレインパンチ",81.0],["れいとうパンチ",57.4],["かみなりパンチ",44.5],["はたきおとす",27.6],["じしん",24.2],["どくづき",16.9],["インファイト",11.3],["しっぺがえし",11.3],["ビルドアップ",9.4]],
+ 100:[["ねがいごと",73.9],["ねっとう",65.2],["まもる",62.9],["クイックターン",54.7],["あくび",44.2],["めいそう",24.6],["れいとうビーム",24.0],["とける",17.1],["バトンタッチ",11.0],["ハイドロポンプ",4.3]]
+};
+P.forEach(p=>{ p.pcode=PCODE[p.r]; p.mvr=MOVES[p.r]||[]; if(p.mvr.length) p.mv=p.mvr.slice(0,4).map(m=>m[0]); });
+
+/* ===== 採用率トップ10の持ち物（シーズンM-3・pokedb / [道具名,採用率%]） ===== */
+const ITEMS={
+ 1:[["きあいのタスキ",38.4],["こだわりスカーフ",25.6],["オボンのみ",20.9],["いのちのたま",4.9],["ラムのみ",4.8],["ガブリアスナイト",1.0],["たべのこし",1.0],["ヤチェのみ",0.7],["ハバンのみ",0.5],["せんせいのツメ",0.3]],
+ 2:[["いのちのたま",83.8],["ラムのみ",4.3],["ピントレンズ",2.8],["のろいのおふだ",2.6],["ようせいのハネ",1.1],["オボンのみ",0.9],["たべのこし",0.9],["ひかりのこな",0.7],["メンタルハーブ",0.6],["こだわりスカーフ",0.4]],
+ 3:[["こだわりスカーフ",72.3],["きあいのタスキ",18.5],["いのちのたま",4.3],["たつじんのおび",1.1],["オボンのみ",0.6],["せんせいのツメ",0.6],["ちからのハチマキ",0.4],["こうかくレンズ",0.3],["ラムのみ",0.3],["たべのこし",0.2]],
+ 4:[["オボンのみ",30.8],["たべのこし",29.5],["しろいハーブ",18.8],["こだわりスカーフ",10.1],["ピントレンズ",1.7],["ヨプのみ",1.3],["シュカのみ",1.1],["きあいのタスキ",0.8],["りゅうのキバ",0.8],["ひかりのねんど",0.7]],
+ 5:[["メタグロスナイト",96.8],["いのちのたま",0.7],["オボンのみ",0.5],["シュカのみ",0.3],["たべのこし",0.3],["こだわりスカーフ",0.2],["ひかりのねんど",0.2],["たつじんのおび",0.1],["きあいのタスキ",0.1],["せんせいのツメ",0.1]],
+ 6:[["ライチュウナイトＹ",96.5],["ライチュウナイトＸ",3.0],["きあいのタスキ",0.2]],
+ 7:[["ムクホークナイト",94.8],["こだわりスカーフ",4.3],["いのちのたま",0.1],["きあいのタスキ",0.1],["オボンのみ",0.1],["せんせいのツメ",0.1]],
+ 8:[["リザードナイトＹ",73.6],["リザードナイトＸ",24.5],["きあいのタスキ",0.4]],
+ 9:[["たべのこし",72.0],["オボンのみ",25.2],["メンタルハーブ",0.6],["ラムのみ",0.4],["オッカのみ",0.4],["するどいくちばし",0.3],["ソクノのみ",0.3],["ひかりのこな",0.2],["持ち物なし",0.2]],
+ 10:[["オボンのみ",67.4],["たべのこし",28.1],["さらさらいわ",2.0],["ラムのみ",0.4],["メンタルハーブ",0.4],["リンドのみ",0.3],["せんせいのツメ",0.3],["きあいのタスキ",0.2],["ひかりのこな",0.2],["イトケのみ",0.2]],
+ 11:[["バシャーモナイト",69.8],["きあいのタスキ",18.3],["いのちのたま",5.8],["オボンのみ",2.5],["たべのこし",0.8],["シュカのみ",0.6],["ラムのみ",0.4],["メンタルハーブ",0.3],["ひかりのこな",0.2],["しろいハーブ",0.2]],
+ 12:[["ひかりのねんど",88.9],["きあいのタスキ",3.4],["とけないこおり",3.2],["オボンのみ",1.0],["こだわりスカーフ",0.8],["つめたいいわ",0.5],["いのちのたま",0.4],["たべのこし",0.4],["ラムのみ",0.2],["ひかりのこな",0.2]],
+ 13:[["ラグラージナイト",75.9],["オボンのみ",12.9],["たべのこし",4.8],["リンドのみ",3.6],["きあいのタスキ",1.3],["ラムのみ",0.3],["いのちのたま",0.2],["せんせいのツメ",0.1],["たつじんのおび",0.1],["こだわりスカーフ",0.1]],
+ 14:[["こだわりスカーフ",62.1],["きあいのタスキ",13.5],["持ち物なし",10.7],["しんぴのしずく",9.3],["のろいのおふだ",4.0],["カシブのみ",0.4]],
+ 15:[["オボンのみ",58.0],["たべのこし",15.9],["しんぴのしずく",8.4],["きあいのタスキ",3.6],["ラムのみ",3.6],["いのちのたま",2.0],["カゴのみ",1.8],["ようせいのハネ",1.8],["せんせいのツメ",1.0],["こだわりスカーフ",0.7]],
+ 16:[["ギャラドスナイト",40.4],["たべのこし",33.0],["オボンのみ",13.6],["ラムのみ",5.2],["いのちのたま",2.0],["たつじんのおび",1.5],["カゴのみ",1.2],["きあいのタスキ",0.9],["ソクノのみ",0.5],["こだわりスカーフ",0.4]],
+ 17:[["こだわりスカーフ",76.4],["いのちのたま",7.9],["きあいのタスキ",5.0],["ラムのみ",2.7],["ハバンのみ",1.6],["たべのこし",1.5],["くろいメガネ",1.0],["たつじんのおび",0.8],["しろいハーブ",0.7],["オボンのみ",0.7]],
+ 18:[["きあいのタスキ",64.6],["キラフロルナイト",28.4],["たべのこし",3.1],["こだわりスカーフ",1.7],["オボンのみ",0.8],["シュカのみ",0.5],["イトケのみ",0.2],["せんせいのツメ",0.2],["たつじんのおび",0.1],["いのちのたま",0.1]],
+ 19:[["オボンのみ",45.1],["たべのこし",31.0],["こだわりスカーフ",15.1],["こうかくレンズ",1.5],["ラムのみ",1.1],["カゴのみ",0.9],["ひかりのねんど",0.8],["いのちのたま",0.8],["せんせいのツメ",0.5],["リンドのみ",0.5]],
+ 20:[["持ち物なし",81.8],["オボンのみ",8.1],["きあいのタスキ",7.7],["しんぴのしずく",0.2],["こだわりスカーフ",0.2],["たべのこし",0.1],["ラムのみ",0.1],["ソクノのみ",0.1]],
+ 21:[["カイリュナイト",70.4],["ラムのみ",13.5],["たべのこし",3.7],["いのちのたま",3.3],["しろいハーブ",2.9],["シルクのスカーフ",1.0],["ちからのハチマキ",0.8],["オボンのみ",0.8],["たつじんのおび",0.8],["こだわりスカーフ",0.8]],
+ 22:[["ひかりのねんど",71.2],["たべのこし",16.5],["たつじんのおび",5.8],["オボンのみ",2.2],["くろいメガネ",0.9],["いのちのたま",0.7],["きあいのタスキ",0.5],["ちからのハチマキ",0.3],["くろいてっきゅう",0.3],["ラムのみ",0.3]],
+ 23:[["こだわりスカーフ",39.5],["たべのこし",28.0],["オボンのみ",7.9],["持ち物なし",7.6],["シュカのみ",4.3],["のろいのおふだ",2.9],["きあいのタスキ",2.5],["カシブのみ",2.3],["しろいハーブ",1.1]],
+ 24:[["マフォクシナイト",99.2],["こだわりスカーフ",0.3],["まがったスプーン",0.1],["ムクホークナイト",0.1]],
+ 25:[["くろいメガネ",54.6],["いのちのたま",16.4],["きあいのタスキ",7.2],["ヨプのみ",7.1],["オボンのみ",5.1],["たべのこし",2.6],["せんせいのツメ",2.1],["ラムのみ",1.8],["シュカのみ",1.4],["ちからのハチマキ",1.0]],
+ 26:[["クチートナイト",99.6]],
+ 27:[["たべのこし",43.8],["オボンのみ",29.6],["カシブのみ",7.9],["シュカのみ",2.0],["ラムのみ",1.4],["ひかりのこな",1.1],["もくたん",0.8],["メトロノーム",0.7],["フォーカスレンズ",0.5],["きあいのタスキ",0.3]],
+ 28:[["ゲンガナイト",63.1],["きあいのタスキ",34.4],["こだわりスカーフ",0.7],["いのちのたま",0.7],["こうかくレンズ",0.2],["どくバリ",0.2],["きあいのハチマキ",0.2],["のろいのおふだ",0.1],["シュカのみ",0.1],["ちからのハチマキ",0.1]],
+ 29:[["ドラミドナイト",97.6],["いのちのたま",0.9],["オボンのみ",0.4],["たべのこし",0.3],["しろいハーブ",0.2],["せんせいのツメ",0.2],["ピントレンズ",0.1],["ガメノデスナイト",0.1],["ハバンのみ",0.1],["メトロノーム",0.1]],
+ 30:[["たべのこし",54.0],["のろいのおふだ",27.2],["いのちのたま",8.7],["きあいのタスキ",6.6],["ラムのみ",1.3],["ちからのハチマキ",0.8],["オボンのみ",0.7],["たつじんのおび",0.1],["ものしりメガネ",0.1],["せんせいのツメ",0.1]],
+ 31:[["ゲッコウガナイト",45.4],["きあいのタスキ",35.0],["こだわりスカーフ",11.0],["いのちのたま",6.8],["くろいメガネ",0.5],["たつじんのおび",0.5],["おうじゃのしるし",0.4],["メトロノーム",0.2],["しめったいわ",0.1],["ものしりメガネ",0.1]],
+ 32:[["ハッサムナイト",60.0],["いのちのたま",12.1],["メタルコート",10.5],["オボンのみ",9.7],["たべのこし",2.5],["ラムのみ",2.2],["きあいのタスキ",0.6],["シビルドナイト",0.4],["オッカのみ",0.4],["メトロノーム",0.3]],
+ 33:[["きあいのタスキ",40.5],["くろいメガネ",25.9],["こだわりスカーフ",18.5],["いのちのたま",6.2],["オボンのみ",4.9],["ラムのみ",1.2],["たべのこし",0.8],["かいがらのすず",0.4],["メトロノーム",0.3],["たつじんのおび",0.2]],
+ 34:[["いのちのたま",34.6],["ひかりのねんど",21.7],["きあいのタスキ",20.2],["こだわりスカーフ",9.8],["たべのこし",3.1],["オボンのみ",2.0],["しろいハーブ",1.9],["りゅうのキバ",1.6],["こうかくレンズ",1.1],["ラムのみ",1.0]],
+ 35:[["ミミロップナイト",97.9],["きあいのタスキ",0.5],["オボンのみ",0.4],["メンタルハーブ",0.3],["たべのこし",0.3],["こだわりスカーフ",0.3],["ヨプのみ",0.2],["ムクホークナイト",0.1]],
+ 36:[["オボンのみ",41.8],["たべのこし",17.6],["きあいのタスキ",15.9],["ラムのみ",15.6],["こだわりスカーフ",3.4],["いのちのたま",1.5],["ひかりのこな",1.0],["イトケのみ",0.8],["たつじんのおび",0.6],["カゴのみ",0.5]],
+ 37:[["スターミナイト",97.2],["きあいのタスキ",1.5],["ひかりのこな",0.5],["たつじんのおび",0.4],["リンドのみ",0.1],["たべのこし",0.1],["オボンのみ",0.1],["いのちのたま",0.1]],
+ 38:[["とけないこおり",57.0],["ひかりのねんど",26.8],["きあいのタスキ",5.1],["オボンのみ",3.9],["たべのこし",2.7],["こだわりスカーフ",2.6],["いのちのたま",0.9],["つめたいいわ",0.3],["シュカのみ",0.3],["くろいてっきゅう",0.2]],
+ 39:[["きあいのタスキ",89.9],["こだわりスカーフ",1.7],["たべのこし",1.5],["オボンのみ",1.4],["いのちのたま",1.0],["シュカのみ",0.9],["のろいのおふだ",0.9],["しろいハーブ",0.4],["もくたん",0.4],["ひかりのねんど",0.4]],
+ 40:[["メガニウムナイト",99.0],["オボンのみ",0.1],["たべのこし",0.1]],
+ 41:[["たべのこし",88.8],["オボンのみ",6.2],["ラムのみ",1.1],["ひかりのこな",1.0],["ヨプのみ",0.6],["ひかりのねんど",0.5],["メンタルハーブ",0.4],["くろいメガネ",0.3],["せんせいのツメ",0.3],["ロゼルのみ",0.1]],
+ 42:[["しろいハーブ",41.2],["きあいのタスキ",29.3],["オボンのみ",15.4],["こだわりスカーフ",6.8],["いのちのたま",2.6],["せんせいのツメ",1.8],["ちからのハチマキ",0.8],["ラムのみ",0.4],["シュカのみ",0.3],["でんきだま",0.3]],
+ 43:[["フシギバナイト",94.1],["いのちのたま",2.8],["たべのこし",0.5],["おおきなねっこ",0.4],["しろいハーブ",0.3],["たつじんのおび",0.3],["オボンのみ",0.2],["メンタルハーブ",0.2],["こうかくレンズ",0.1]],
+ 44:[["カメックスナイト",92.1],["しろいハーブ",3.8],["たべのこし",2.0],["オボンのみ",1.0],["たつじんのおび",0.4],["いのちのたま",0.2]],
+ 45:[["たべのこし",49.1],["オボンのみ",32.8],["きあいのタスキ",4.8],["でんきだま",3.7],["ラムのみ",2.9],["いのちのたま",1.7],["かいがらのすず",0.6],["たつじんのおび",0.5],["ロゼルのみ",0.5],["こだわりスカーフ",0.5]],
+ 46:[["ルカリオナイト",92.9],["きあいのタスキ",4.3],["いのちのたま",1.1],["くろおび",0.4],["オボンのみ",0.4],["こだわりスカーフ",0.4]],
+ 47:[["たべのこし",39.9],["ようせいのハネ",32.3],["オボンのみ",12.3],["いのちのたま",4.4],["カゴのみ",3.7],["せんせいのツメ",3.0],["ラムのみ",1.0],["こだわりスカーフ",0.7],["きあいのタスキ",0.6],["たつじんのおび",0.5]],
+ 48:[["きあいのタスキ",51.3],["たべのこし",35.2],["オボンのみ",3.1],["ようせいのハネ",1.7],["ヤチェのみ",1.2],["ひかりのこな",1.2],["あついいわ",1.0],["ラムのみ",0.7],["ひかりのねんど",0.6],["おおきなねっこ",0.5]],
+ 49:[["オボンのみ",34.3],["こだわりスカーフ",27.5],["たべのこし",27.1],["しろいハーブ",2.5],["じしゃく",1.5],["ラムのみ",1.5],["きあいのタスキ",1.2],["イトケのみ",1.1],["ものしりメガネ",1.0],["こうかくレンズ",0.7]],
+ 50:[["きあいのタスキ",86.5],["オボンのみ",5.4],["いのちのたま",2.6],["こだわりスカーフ",1.9],["イトケのみ",1.5],["ちからのハチマキ",0.8],["ヨプのみ",0.7],["ラムのみ",0.4],["とけないこおり",0.2],["リンドのみ",0.1]],
+ 51:[["たべのこし",60.4],["オボンのみ",30.3],["シュカのみ",4.7],["じしゃく",2.8],["ひかりのねんど",0.5],["くろいてっきゅう",0.3],["ひかりのこな",0.3],["おおきなねっこ",0.3],["メンタルハーブ",0.2]],
+ 52:[["バンギラスナイト",32.0],["オボンのみ",18.6],["たべのこし",10.8],["ヨプのみ",10.7],["さらさらいわ",6.9],["カゴのみ",3.9],["ラムのみ",3.6],["たつじんのおび",3.4],["シュカのみ",2.5],["こだわりスカーフ",2.4]],
+ 53:[["こだわりスカーフ",36.6],["きあいのタスキ",32.0],["いのちのたま",19.1],["やわらかいすな",4.0],["ドリュウズナイト",3.0],["ラムのみ",2.6],["ヨプのみ",0.9],["オボンのみ",0.6],["シュカのみ",0.1],["ちからのハチマキ",0.1]],
+ 54:[["オボンのみ",77.9],["いのちのたま",6.1],["ラムのみ",5.9],["たべのこし",3.4],["しんぴのしずく",2.2],["ちからのハチマキ",0.9],["きあいのタスキ",0.5],["しろいハーブ",0.5],["カゴのみ",0.5],["せんせいのツメ",0.5]],
+ 55:[["たべのこし",73.0],["オボンのみ",9.6],["メンタルハーブ",5.0],["ひかりのこな",2.0],["シュカのみ",1.4],["ラムのみ",1.0],["きれいなぬけがら",0.4],["せんせいのツメ",0.1]],
+ 56:[["フラエッテナイト",92.9],["こだわりスカーフ",6.4],["リザードナイトＹ",0.4],["いのちのたま",0.2],["おおきなねっこ",0.1]],
+ 57:[["ピクシナイト",71.5],["たべのこし",14.5],["オボンのみ",7.7],["いのちのたま",1.8],["ラムのみ",0.6],["ひかりのねんど",0.6],["ひかりのこな",0.5],["リリバのみ",0.5],["ようせいのハネ",0.3],["きあいのタスキ",0.3]],
+ 58:[["ユキメノコナイト",95.5],["せんせいのツメ",1.8],["きあいのタスキ",0.8],["オボンのみ",0.7],["ユキノオナイト",0.2],["いのちのたま",0.1]],
+ 59:[["きあいのタスキ",78.0],["こだわりスカーフ",17.1],["いのちのたま",2.8],["ひかりのこな",0.7],["こうかくレンズ",0.4],["ナモのみ",0.3],["しめったいわ",0.3],["たつじんのおび",0.2],["きあいのハチマキ",0.1]],
+ 60:[["きあいのタスキ",38.6],["オボンのみ",32.2],["たべのこし",12.0],["ひかりのねんど",6.0],["ナモのみ",1.9],["ラムのみ",1.8],["メトロノーム",1.8],["メンタルハーブ",1.5],["まがったスプーン",1.4],["カシブのみ",1.1]],
+ 61:[["オボンのみ",59.2],["きあいのタスキ",15.5],["しんぴのしずく",9.4],["ソクノのみ",3.6],["たべのこし",3.3],["ヨロギのみ",2.6],["メンタルハーブ",1.9],["いのちのたま",1.3],["せんせいのツメ",1.0],["ラムのみ",0.9]],
+ 62:[["エアームドナイト",36.7],["オボンのみ",29.1],["たべのこし",25.3],["ひかりのこな",2.5],["するどいくちばし",2.1],["メンタルハーブ",1.5],["くろおび",0.6],["ラムのみ",0.4],["きあいのタスキ",0.2],["ソクノのみ",0.1]],
+ 63:[["こだわりスカーフ",86.4],["きあいのタスキ",9.9],["せんせいのツメ",3.7],["ラムのみ",0.1]],
+ 64:[["たべのこし",56.3],["オボンのみ",25.4],["ラムのみ",14.6],["しんぴのしずく",1.3],["きあいのタスキ",0.8],["ひかりのこな",0.5],["メトロノーム",0.2],["たつじんのおび",0.1],["フォーカスレンズ",0.1],["こだわりスカーフ",0.1]],
+ 65:[["サーナイトナイト",72.4],["きあいのタスキ",14.2],["こだわりスカーフ",6.9],["たつじんのおび",2.7],["ようせいのハネ",1.4],["ひかりのこな",0.8],["いのちのたま",0.6],["ラムのみ",0.5],["リリバのみ",0.3],["せんせいのツメ",0.2]],
+ 66:[["たべのこし",42.0],["ヨプのみ",26.8],["カゴのみ",10.8],["ラムのみ",8.9],["オボンのみ",8.7],["たつじんのおび",1.1],["いのちのたま",0.4],["しろいハーブ",0.3],["せんせいのツメ",0.2]],
+ 67:[["ジュカインナイト",82.9],["きあいのタスキ",12.3],["しろいハーブ",2.8],["いのちのたま",1.3],["オボンのみ",0.4],["こだわりスカーフ",0.2]],
+ 68:[["シビルドナイト",97.0],["たつじんのおび",0.8],["オボンのみ",0.8],["カゴのみ",0.6],["いのちのたま",0.5],["たべのこし",0.1],["ライチュウナイトＹ",0.1],["きあいのタスキ",0.1],["こだわりスカーフ",0.1]],
+ 69:[["きあいのタスキ",45.1],["こだわりスカーフ",30.2],["エルレイドナイト",12.9],["ピントレンズ",4.5],["いのちのたま",1.7],["ラムのみ",1.5],["たつじんのおび",1.5],["ちからのハチマキ",1.1],["オボンのみ",0.8],["おうじゃのしるし",0.6]],
+ 70:[["たべのこし",49.6],["オボンのみ",19.0],["カシブのみ",11.6],["おおきなねっこ",4.3],["ラムのみ",3.3],["きあいのタスキ",2.0],["しろいハーブ",1.1],["メンタルハーブ",1.0],["バコウのみ",0.8],["いのちのたま",0.8]],
+ 71:[["たべのこし",23.7],["きあいのタスキ",20.0],["オボンのみ",16.4],["ひかりのねんど",11.8],["こだわりスカーフ",7.1],["メトロノーム",5.4],["いのちのたま",4.5],["きせきのタネ",3.9],["こうかくレンズ",2.3],["ラムのみ",1.8]],
+ 72:[["ガルーラナイト",96.4],["ヨプのみ",1.4],["きあいのタスキ",1.1],["いのちのたま",0.5],["シルクのスカーフ",0.2],["メトロノーム",0.1]],
+ 73:[["きあいのタスキ",73.4],["こだわりスカーフ",19.6],["オボンのみ",3.6],["いのちのたま",1.6],["こうかくレンズ",1.3],["イトケのみ",0.4]],
+ 74:[["オボンのみ",48.5],["たべのこし",30.0],["ラムのみ",7.3],["きあいのタスキ",4.3],["ヨプのみ",2.8],["せんせいのツメ",2.4],["こだわりスカーフ",1.6],["カゴのみ",0.2],["シュカのみ",0.2]],
+ 75:[["ヤミラミナイト",46.7],["ひかりのねんど",26.1],["たべのこし",10.9],["きあいのタスキ",4.1],["オボンのみ",3.0],["ひかりのこな",2.4],["こうかくレンズ",2.0],["おおきなねっこ",1.1],["しめったいわ",0.8],["メンタルハーブ",0.5]],
+ 76:[["スコヴィラナイト",75.0],["たべのこし",15.3],["オボンのみ",3.9],["おおきなねっこ",1.7],["ラムのみ",1.3],["いのちのたま",0.6]],
+ 77:[["きあいのタスキ",91.1],["シュカのみ",2.4],["オボンのみ",1.8],["メンタルハーブ",1.3],["たつじんのおび",1.1],["いのちのたま",0.8],["こだわりスカーフ",0.7],["もくたん",0.5],["しろいハーブ",0.1],["ものしりメガネ",0.1]],
+ 78:[["ペンドラナイト",41.5],["きあいのタスキ",31.2],["オボンのみ",12.6],["たべのこし",4.4],["いのちのたま",3.2],["ひかりのこな",2.8],["メンタルハーブ",2.7],["ラムのみ",0.7],["ぎんのこな",0.5],["クチートナイト",0.2]],
+ 79:[["きあいのタスキ",38.8],["オボンのみ",25.3],["たべのこし",16.5],["ビアーのみ",3.2],["カシブのみ",2.8],["いのちのたま",2.8],["ようせいのハネ",2.4],["おおきなねっこ",2.0],["せんせいのツメ",1.6],["ラムのみ",1.5]],
+ 80:[["ズルズキナイト",98.7],["たべのこし",1.2],["ムクホークナイト",0.1]],
+ 81:[["きあいのタスキ",87.3],["こだわりスカーフ",8.7],["いのちのたま",3.6],["ヨプのみ",0.4],["せんせいのツメ",0.1]],
+ 82:[["ヤドランナイト",59.7],["たべのこし",14.9],["オボンのみ",10.3],["いのちのたま",3.5],["せんせいのツメ",2.8],["ひかりのこな",2.1],["カシブのみ",1.5],["フォーカスレンズ",1.2],["ラムのみ",0.4],["きれいなぬけがら",0.4]],
+ 83:[["こうかくレンズ",78.4],["おうじゃのしるし",11.7],["オボンのみ",5.1],["きあいのタスキ",1.6],["ラムのみ",1.2],["ピントレンズ",1.1],["シルクのスカーフ",0.7],["イトケのみ",0.1],["ヨプのみ",0.1],["メトロノーム",0.1]],
+ 84:[["ユキノオナイト",52.2],["ひかりのねんど",17.6],["きあいのタスキ",13.1],["たべのこし",10.0],["オボンのみ",2.3],["ラムのみ",1.8],["とけないこおり",1.0],["ヨプのみ",0.7],["おおきなねっこ",0.6],["せんせいのツメ",0.4]],
+ 85:[["ジュペッタナイト",99.7]],
+ 86:[["ガメノデスナイト",96.6],["しろいハーブ",1.9],["きあいのタスキ",1.4]],
+ 87:[["たべのこし",39.5],["オボンのみ",26.6],["カゴのみ",8.3],["シュカのみ",6.9],["たつじんのおび",3.4],["ヨプのみ",3.0],["りゅうのキバ",2.7],["ひかりのこな",2.4],["しろいハーブ",2.0],["ラムのみ",1.8]],
+ 88:[["シュカのみ",36.0],["オボンのみ",25.2],["たべのこし",23.9],["きあいのタスキ",3.0],["いのちのたま",2.6],["ヨプのみ",2.4],["たつじんのおび",1.4],["ソクノのみ",1.4],["メンタルハーブ",1.4],["しんぴのしずく",0.8]],
+ 89:[["しろいハーブ",77.4],["きあいのタスキ",21.3],["ラムのみ",1.3]],
+ 90:[["こだわりスカーフ",33.4],["きあいのタスキ",28.8],["シャンデラナイト",10.2],["たべのこし",7.7],["シュカのみ",6.8],["いのちのたま",4.5],["カシブのみ",3.5],["オボンのみ",2.0],["メンタルハーブ",0.8],["しろいハーブ",0.6]],
+ 91:[["たべのこし",87.1],["きあいのタスキ",7.6],["オボンのみ",1.9],["いのちのたま",1.1],["ひかりのこな",0.9],["こうかくレンズ",0.7],["せんせいのツメ",0.6],["ラムのみ",0.2],["こだわりスカーフ",0.1]],
+ 92:[["たべのこし",34.2],["オボンのみ",27.3],["シュカのみ",20.8],["ひかりのこな",3.5],["カシブのみ",2.3],["まがったスプーン",2.1],["たつじんのおび",1.8],["いのちのたま",1.4],["つめたいいわ",0.9],["メンタルハーブ",0.6]],
+ 93:[["カエンジシナイト",99.1],["きあいのタスキ",0.7],["オボンのみ",0.1],["もくたん",0.1]],
+ 94:[["オボンのみ",61.4],["たべのこし",15.7],["きあいのタスキ",7.9],["ヤチェのみ",3.1],["するどいくちばし",2.9],["おうじゃのしるし",2.3],["せんせいのツメ",2.0],["ラムのみ",1.5],["いのちのたま",1.3],["ソクノのみ",0.7]],
+ 95:[["こだわりスカーフ",37.8],["きあいのタスキ",31.7],["オボンのみ",13.0],["いのちのたま",8.7],["たべのこし",3.3],["もくたん",2.1],["ピントレンズ",1.4],["ヨプのみ",1.1],["せんせいのツメ",0.3],["かたいいし",0.3]],
+ 96:[["たべのこし",18.0],["いのちのたま",17.4],["こだわりスカーフ",17.1],["オボンのみ",13.6],["ひかりのこな",9.3],["きあいのタスキ",9.3],["ラムのみ",5.2],["ヤチェのみ",3.2],["でんきだま",2.6],["カゴのみ",0.9]],
+ 97:[["ブリガロナイト",85.6],["たべのこし",8.6],["オボンのみ",3.1],["おおきなねっこ",0.8],["いのちのたま",0.6],["カゴのみ",0.3],["せんせいのツメ",0.3],["きせきのタネ",0.2],["ラムのみ",0.1],["きれいなぬけがら",0.1]],
+ 98:[["オボンのみ",90.9],["オッカのみ",2.7],["きあいのタスキ",2.1],["せんせいのツメ",1.7],["たべのこし",1.3],["ラムのみ",0.6],["ソクノのみ",0.4],["メンタルハーブ",0.2]],
+ 99:[["いのちのたま",38.8],["オボンのみ",17.3],["たつじんのおび",11.5],["くろおび",10.2],["きあいのタスキ",7.5],["たべのこし",4.2],["ピントレンズ",3.3],["ちからのハチマキ",3.3],["メトロノーム",1.7],["せんせいのツメ",0.8]],
+ 100:[["たべのこし",80.3],["オボンのみ",18.9],["カゴのみ",0.8]]
+};
+P.forEach(p=>{ p.itr=ITEMS[p.r]||[]; });
+
+/* ===== 特性の説明 ===== */
+const ABILITY={
+ "すながくれ":"すなあらし中、回避率が上がる。","さめはだ":"接触技を受けると相手に最大HP1/8のダメージ。",
+ "スタミナ":"攻撃を受けるたび、ぼうぎょが1段階上がる。","がんじょう":"HP満タンなら一撃では倒れず、一撃必殺も無効。",
+ "しんりょく":"HP1/3以下でくさ技の威力が1.5倍。","へんげんじざい":"出す技のタイプに自分のタイプが変化する。",
+ "げきりゅう":"HP1/3以下でみず技の威力が1.5倍。","うるおいボイス":"音技のタイプがみずに変化する。",
+ "プレッシャー":"相手の技のPP消費が2倍になる。","ミラーアーマー":"能力を下げる効果を相手に跳ね返す。",
+ "もうか":"HP1/3以下でほのお技の威力が1.5倍。","サンパワー":"晴れ下でとくこう1.5倍だが毎ターンHPが減る。",
+ "てきおうりょく":"自分と同じタイプの技の補正が2倍になる。","かたやぶり":"相手の特性を無視して技を出す。",
+ "すなおこし":"登場時にすなあらしを発生させる。","すなのちから":"砂中、いわ・じめん・はがね技が1.3倍。",
+ "いかく":"登場時、相手のこうげきを1段階下げる。","じしんかじょう":"相手を倒すとこうげきが1段階上がる。",
+ "ふくつのこころ":"ひるむと素早さが1段階上がる。","せいしんりょく":"ひるまず、いかくも無効化する。",
+ "クリアボディ":"相手に能力を下げられない。","ひらいしん":"でんき技を引き寄せ無効化し、とくこうが上がる。",
+ "すてみ":"反動技の反動ダメージを受けない。","かそく":"毎ターン終了時に素早さが1段階上がる。",
+ "ゆきがくれ":"ゆき/あられ中、回避率が上がる。","ゆきふらし":"登場時にゆきを降らせる。",
+ "しめりけ":"だいばくはつ等の自爆技を封じる。","バトルスイッチ":"攻撃でブレード、キングシールドでシールドに変化。",
+ "マルチスケイル":"HP満タンのとき受けるダメージが半減。","ほのおのからだ":"接触されると相手をやけどにすることがある。",
+ "むしのしらせ":"HP1/3以下でむし技の威力が1.5倍。","ばけのかわ":"1度だけ攻撃を無効化する（皮が剥がれる）。",
+ "しぜんかいふく":"引っ込めると状態異常が治る。","アナライズ":"自分が後攻なら技の威力が1.3倍。",
+ "ふゆう":"じめんタイプの技を受けない。","まけんき":"能力を下げられるとこうげきが2段階上がる。",
+ "するどいめ":"命中率を下げられない。","マジシャン":"攻撃が当たると相手の持ち物を奪う。",
+ "もらいび":"ほのお技を無効化し、自分のほのお技が強化される。","きれあじ":"切る技（つるぎ系等）の威力が1.5倍。",
+ "シンクロ":"受けた状態異常を相手にもうつす。","てんねん":"相手の能力ランク変化を無視して計算する。",
+ "ようりょくそ":"晴れ下で素早さが2倍になる。","はやおき":"ねむりが半分の早さで回復する。",
+ "きもったま":"ノーマル・かくとう技がゴーストに当たる。","おうごんのからだ":"相手の変化技を受けない。",
+ "かいりきバサミ":"こうげきを下げられない。","ちからずく":"追加効果を捨てる代わり技威力1.3倍。",
+ "どくのトゲ":"接触されると相手をどくにすることがある。","のろわれボディ":"攻撃を受けると相手の技をかなしばりにすることがある。",
+ "テクニシャン":"威力60以下の技の威力が1.5倍。","どくげしょう":"攻撃が当たると相手の場にどくびしを撒く。",
+ "ゆうばく":"接触技で倒されると相手にダメージ。","いたずらごころ":"変化技を先制で出せる（あくには無効）。",
+ "すりぬけ":"壁・みがわり等を無視して攻撃する。","メガランチャー":"はどう技（はどうだん等）の威力が1.5倍。",
+ "マジックガード":"攻撃技以外ではダメージを受けない。","フェアリースキン":"ノーマル技がフェアリーになり威力1.2倍。",
+ "メロメロボディ":"接触されると相手をメロメロにすることがある。","あめふらし":"登場時にあめを降らせる。",
+ "あめうけざら":"あめ中、毎ターンHPが回復する。","めんえき":"どく状態にならない。",
+ "あついしぼう":"ほのお・こおり技のダメージを半減する。","どんかん":"メロメロ・ちょうはつにならず、いかくも無効。",
+ "アイスボディ":"ゆき/あられ中、毎ターンHPが回復する。","せいでんき":"接触されると相手をまひにすることがある。",
+ "でんきにかえる":"攻撃を受けると次のでんき技が2倍になる。","せいぎのこころ":"あく技を受けるとこうげきが1段階上がる。",
+ "わるいてぐせ":"攻撃が当たると相手の持ち物を奪う。","ねんちゃく":"持ち物を奪われない。",
+ "リーフガード":"晴れ下で状態異常にならない。","きんちょうかん":"相手はきのみを食べられなくなる。",
+ "ぼうじん":"砂・あられや粉技でダメージを受けない。",
+ "かたいツメ":"接触技の威力が1.3倍になる。","エレキメイカー":"地上のでんき技が1.3倍になり、地上のポケモンは眠らない。",
+ "ノーガード":"お互いの技が必ず命中する。","あまのじゃく":"能力ランクの変化が逆になる（下降→上昇）。",
+ "ちからもち":"こうげきの実数値が2倍になる。","かたいあご":"かみつき技（かみくだく等）の威力が1.5倍。",
+ "ひでり":"登場時に天気を晴れにする。",
+ "にげあし":"野生戦で必ず逃げられる（対戦では効果なし）。","すいすい":"あめ中、素早さが2倍になる。",
+ "かげふみ":"相手は交代・逃げができなくなる。",
+ "きんしのちから":"相手の能力が上がると自分も同じだけ上がる。","かわりもの":"登場時、目の前の相手に変身する。",
+ "ちくでん":"でんき技を受けると無効化しHPを回復する。","すなかき":"すなあらし中、素早さが2倍になる。",
+ "そうしょく":"くさ技を無効化しこうげきが1段階上がる。","ひとでなし":"相手がどく状態だと攻撃の威力が上がる。",
+ "さいせいりょく":"引っ込めるとHPを最大1/3回復する。","じゅうなん":"まひ状態にならない。",
+ "のろいのからだ":"攻撃を受けると相手の技をかなしばりにすることがある。","ふしぎなうろこ":"状態異常のときぼうぎょが1.5倍。",
+ "かちき":"能力を下げられるととくこうが2段階上がる。","トレース":"登場時に相手の特性をコピーする。",
+ "もてなし":"味方の登場時にHPを少し回復する。","たいねつ":"ほのお技とやけどのダメージを半減する。",
+ "マジックミラー":"相手の変化技を跳ね返す。","いやしのこころ":"ターン終了時、味方の状態異常を治すことがある。",
+ "だっぴ":"ターン終了時、状態異常を治すことがある。","ぶきよう":"持ち物の効果を使えない。",
+ "マイペース":"こんらんにならず、いかくも無効。","フレンドガード":"味方が受けるダメージを軽減する。",
+ "ぼうおん":"音の技（ハイパーボイス等）を受けない。","シェルアーマー":"相手の攻撃が急所に当たらない。",
+ "くだけるよろい":"物理を受けるとぼうぎょが下がり素早さが2段階上がる。","りんぷん":"技の追加効果を受けない。",
+ "はとむね":"ぼうぎょを下げられない。","スキルリンク":"連続技が必ず最大回数当たる。",
+ "ポイズンヒール":"どく状態のとき毎ターンHPが回復する。","どしょく":"じめん技を無効化しHPを回復する。",
+ "こんじょう":"状態異常のときこうげきが1.5倍。","てつのこぶし":"パンチ技の威力が1.2倍。",
+ "みずのベール":"やけど状態にならない。","うるおいボディ":"あめ中、状態異常が回復する。",
+ "ぼうだん":"弾・球の技（はどうだん等）を受けない。","おやこあい":"2回攻撃する（2回目は威力減）。",
+ "ちからもち":"こうげきの実数値が2倍になる。",
+ "フラワーベール":"味方のくさタイプの能力低下と状態異常を防ぐ。","イリュージョン":"控えの最後のポケモンに化けて登場する。",
+ "すいほう":"みず技のダメージ半減・ほのお技無効・やけど無効（自分の水技は2倍）。","ムラっけ":"ターン終了時、能力が1つ2段階上がり別の1つが1段階下がる。"
+};
+function abDesc(name){ return ABILITY[name.replace("(隠)","").trim()]||""; }
+
+/* ===== 画像URL ===== */
+function imgUrl(p){
+  // pokedbのフォルム別アイコン（フォルム違い・メガも正確）
+  return `https://s3-ap-northeast-1.amazonaws.com/pokedb.tokyo/champs/assets/pokemon/icons_128/pokemon-${p.pcode}.webp`;
+}
+function imgFallback(el,p){
+  // 失敗時はPokeAPI公式アートワーク（全国図鑑番号）にフォールバック
+  el.onerror=function(){ el.onerror=null; el.src=`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.id}.png`; };
+}
+function typeTags(types){
+  return types.map(t=>`<span class="type" style="background:${TYPE_COLOR[t]}">${TYPE_JP[t]}</span>`).join("");
+}
+
+/* ===== 習得状態 ===== */
+const learned = new Set();
+
+/* ===== モード切替 ===== */
+const views={list:"view-list",flash:"view-flash",quiz:"view-quiz",speed:"view-speed",dmg:"view-dmg"};
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    Object.values(views).forEach(v=>document.getElementById(v).classList.add("hidden"));
+    document.getElementById(views[tab.dataset.mode]).classList.remove("hidden");
+    if(tab.dataset.mode==="flash") renderFlash();
+    if(tab.dataset.mode==="speed") calcSpeed();
+    if(tab.dataset.mode==="dmg") calcDmg();
+  };
+});
+
+/* ===== 一覧 ===== */
+const grid=document.getElementById("grid");
+const filterType=document.getElementById("filterType");
+Object.keys(TYPE_JP).forEach(t=>{
+  const o=document.createElement("option");o.value=t;o.textContent=TYPE_JP[t];filterType.appendChild(o);
+});
+function renderList(){
+  const q=document.getElementById("search").value.trim();
+  const ft=filterType.value, fr=document.getElementById("filterRank").value;
+  let list=P.filter(p=>{
+    if(q){
+      const hay=[p.jp,...p.ab.map(a=>a.replace("(隠)","")),...(p.mvr||[]).map(m=>m[0]),
+        ...(p.itr||[]).map(m=>m[0]),...(p.mega?p.mega.map(m=>m.nm):[])].join(" ");
+      if(!hay.includes(q)) return false;
+    }
+    if(ft && !p.t.includes(ft)) return false;
+    if(fr){const[a,b]=fr.split("-").map(Number); if(p.r<a||p.r>b) return false;}
+    return true;
+  });
+  document.getElementById("listCount").textContent=`${list.length}体`;
+  grid.innerHTML=list.map((p,i)=>`
+    <div class="pcard" data-idx="${P.indexOf(p)}">
+      <div class="rank">#${p.r}</div>
+      <div class="learned">${learned.has(p.r)?"✅":""}</div>
+      <img loading="lazy" src="${imgUrl(p)}" alt="${p.jp}" data-pidx="${P.indexOf(p)}">
+      <div class="nm">${p.jp}</div>
+      <div class="types">${typeTags(p.t)}</div>
+    </div>`).join("");
+  grid.querySelectorAll("img").forEach(im=>{const p=P[im.dataset.pidx];imgFallback(im,p);});
+  grid.querySelectorAll(".pcard").forEach(c=>{
+    c.onclick=()=>{ flashIndex=Number(c.dataset.idx); flashOrder=P.map((_,i)=>i); flashMega=0;
+      document.querySelector('.tab[data-mode="flash"]').click(); };
+  });
+}
+document.getElementById("search").oninput=renderList;
+filterType.onchange=renderList;
+document.getElementById("filterRank").onchange=renderList;
+
+/* ===== カード暗記 ===== */
+let flashOrder=P.map((_,i)=>i), flashIndex=0, flashMega=0;
+const flip=document.getElementById("flip");
+function activeFlashList(){
+  const only=document.getElementById("onlyUnlearned").checked;
+  return flashOrder.filter(i=>!only||!learned.has(P[i].r));
+}
+function curFlashP(){ const o=activeFlashList(); return o.length?P[o[Math.min(flashIndex,o.length-1)]]:null; }
+function activeForm(p){
+  if(p.mega && flashMega>0){ const m=p.mega[flashMega-1]; return {nm:m.nm,t:m.t,ab:m.ab,s:m.s,total:m.total,mega:true}; }
+  return {nm:p.jp,t:p.t,ab:p.ab,s:p.s,total:p.total,mega:false};
+}
+function renderFlash(){
+  const order=activeFlashList();
+  const mt=document.getElementById("megaToggle");
+  if(order.length===0){document.getElementById("fName").textContent="全て習得済み🎉";mt.classList.add("hidden");return;}
+  if(flashIndex>=order.length) flashIndex=0;
+  const p=P[order[flashIndex]];
+  const f=activeForm(p);
+  flip.classList.remove("flipped");
+  document.getElementById("fFront-rank").textContent=`#${p.r}（使用率${p.r}位）`;
+  const img=document.getElementById("fImg"); img.src=imgUrl(p); imgFallback(img,p);
+  document.getElementById("fName").innerHTML=f.mega?`${f.nm} <span style="font-size:12px;color:var(--accent);font-weight:800">⚡MEGA</span>`:f.nm;
+  document.getElementById("fTypes").innerHTML=typeTags(f.t);
+  document.getElementById("flashCount").textContent=`${flashIndex+1} / ${order.length}`;
+  document.getElementById("learnBtn").textContent=learned.has(p.r)?"習得済み ✓":"覚えた ✓";
+  if(p.mega){
+    mt.classList.remove("hidden");
+    const n=p.mega.length;
+    mt.textContent=flashMega===0?"⚡ メガを見る":(flashMega<n?"⚡ 次のメガ →":"↩ 通常に戻す");
+  }else{ mt.classList.add("hidden"); }
+  // back
+  const maxStat=180;
+  const stats=f.s.map((v,i)=>`
+    <div class="statrow"><span class="statlbl">${STAT_LABELS[i]}</span>
+    <span class="bar"><span class="barfill" style="width:${Math.min(100,Math.round(v/maxStat*100))}%;background:${barColor(v)}"></span></span>
+    <span class="statval">${v}</span></div>`).join("");
+  const abilities=f.ab.map(a=>`<div class="abrow"><b>${a}</b><br><span>${abDesc(a)}</span></div>`).join("");
+  const movesHtml=p.mvr.map(([nm,pct])=>`<div class="moverow"><span class="mvname">${nm}</span><span class="mvbar"><span style="width:${Math.min(100,pct)}%"></span></span><span class="mvpct">${pct}%</span></div>`).join("");
+  const itemsHtml=(p.itr&&p.itr.length)?p.itr.map(([nm,pct])=>`<div class="moverow"><span class="mvname">${nm}</span><span class="mvbar"><span style="width:${Math.min(100,pct)}%;background:linear-gradient(90deg,#3ddc84,#9bd64a)"></span></span><span class="mvpct">${pct}%</span></div>`).join(""):'<div class="role">データなし</div>';
+  document.getElementById("fBack").innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div class="bigname" style="font-size:18px">${f.nm}${f.mega?' <span style="font-size:11px;color:var(--accent)">⚡MEGA</span>':''}</div>
+      <div class="total">合計 ${f.total}</div></div>
+    <div class="sec"><div class="types" style="justify-content:flex-start;margin:0 0 6px">${typeTags(f.t)}</div></div>
+    <div class="sec">${stats}</div>
+    <div class="sec"><h3>特性${f.mega?'（メガ後）':''}</h3>${abilities}</div>
+    <div class="sec"><h3>採用技 トップ10（使用率）</h3><div class="moves">${movesHtml}</div></div>
+    <div class="sec"><h3>持ち物 トップ10（採用率）</h3><div class="moves">${itemsHtml}</div></div>
+    <div class="sec"><h3>役割</h3><div class="role">${p.role}</div></div>`;
+}
+function barColor(v){ if(v>=120)return"#3ddc84"; if(v>=90)return"#9bd64a"; if(v>=60)return"#f0c020"; return"#ff8a5c"; }
+flip.onclick=()=>flip.classList.toggle("flipped");
+document.getElementById("megaToggle").onclick=(e)=>{e.stopPropagation();const p=curFlashP();if(!p||!p.mega)return;flashMega=(flashMega+1)%(p.mega.length+1);renderFlash();};
+document.getElementById("nextBtn").onclick=()=>{flashIndex++;flashMega=0;renderFlash();};
+document.getElementById("prevBtn").onclick=()=>{const n=activeFlashList().length;flashIndex=(flashIndex-1+n)%n;flashMega=0;renderFlash();};
+document.getElementById("learnBtn").onclick=(e)=>{e.stopPropagation();const p=P[activeFlashList()[flashIndex]];
+  if(learned.has(p.r))learned.delete(p.r);else learned.add(p.r);renderFlash();};
+document.getElementById("shuffleBtn").onclick=()=>{flashOrder=shuffle(P.map((_,i)=>i));flashIndex=0;flashMega=0;renderFlash();};
+document.getElementById("onlyUnlearned").onchange=()=>{flashIndex=0;flashMega=0;renderFlash();};
+
+/* ===== ユーティリティ ===== */
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function sample(arr,n,exclude){const pool=arr.filter(x=>x!==exclude);return shuffle(pool).slice(0,n);}
+function uniqueNums(correct,getter,n){
+  const vals=new Set([correct]);const others=shuffle(P.map(getter).filter(v=>v!==correct));
+  for(const v of others){if(vals.size>=n)break;vals.add(v);}
+  return shuffle([...vals]);
+}
+
+/* ===== クイズ ===== */
+let quizQueue=[],quizIdx=0,quizScore=0,quizWrong=[];
+document.getElementById("startQuiz").onclick=()=>{
+  const types=[...document.querySelectorAll(".qtype:checked")].map(c=>c.value);
+  if(types.length===0){alert("出題形式を1つ以上選んでください");return;}
+  const count=Number(document.getElementById("qCount").value);
+  quizQueue=[];
+  const pool=shuffle(P.slice());
+  for(let i=0;i<count;i++){
+    const p=pool[i%pool.length];
+    const type=types[Math.floor(Math.random()*types.length)];
+    quizQueue.push(buildQuestion(p,type));
+  }
+  quizIdx=0;quizScore=0;quizWrong=[];
+  document.getElementById("quizSetup").classList.add("hidden");
+  document.getElementById("quizResult").classList.add("hidden");
+  document.getElementById("quizPlay").classList.remove("hidden");
+  showQuestion();
+};
+function buildQuestion(p,type){
+  if(type==="stat"){
+    const useSpeed=Math.random()<0.5;
+    const val=useSpeed?p.s[5]:p.total;
+    const opts=uniqueNums(val,x=>useSpeed?x.s[5]:x.total,4);
+    return{type,p,label:useSpeed?"このポケモンの<b>素早さ</b>種族値は？":"このポケモンの<b>合計</b>種族値は？",
+      img:true,choices:opts.map(String),answer:String(val)};
+  }
+  if(type==="ability"){
+    const dir=Math.random()<0.5;
+    const mainAb=p.ab[0];
+    if(dir){ // ポケモン→特性
+      const opts=new Set([mainAb]);
+      shuffle(P).forEach(q=>{if(opts.size<4&&q.ab[0]!==mainAb)opts.add(q.ab[0]);});
+      return{type,p,label:"このポケモンの<b>特性</b>は？（主な特性）",img:true,
+        choices:shuffle([...opts]),answer:mainAb};
+    }else{ // 特性→ポケモン
+      const wrong=sample(P,3,p);
+      const choices=shuffle([p,...wrong]);
+      return{type,p,label:`特性「<b>${mainAb}</b>」を持つのは？`,img:false,
+        choices:choices.map(x=>x.jp),answer:p.jp};
+    }
+  }
+  if(type==="moves"){
+    const wrong=sample(P,3,p);
+    const choices=shuffle([p,...wrong]);
+    return{type,p,label:`この技構成のポケモンは？<br><span class="qmain small">${p.mv.join(" ／ ")}</span>`,
+      img:false,choices:choices.map(x=>x.jp),answer:p.jp,noMain:true};
+  }
+  // reverse
+  const wrong=sample(P,3,p);
+  const choices=shuffle([p,...wrong]);
+  return{type,p,label:"この種族値のポケモンは？",img:false,reverse:true,
+    choices:choices.map(x=>x.jp),answer:p.jp};
+}
+function showQuestion(){
+  const q=quizQueue[quizIdx];
+  document.getElementById("qProgress").textContent=`第 ${quizIdx+1} / ${quizQueue.length} 問`;
+  document.getElementById("qScore").textContent=`正解 ${quizScore}`;
+  document.getElementById("qFeedback").textContent="";
+  document.getElementById("qFeedback").className="feedback";
+  document.getElementById("qNext").classList.add("hidden");
+  let html="";
+  if(q.img){html+=`<img class="qimg" src="${imgUrl(q.p)}" alt="?" id="qpic">`;}
+  html+=`<div class="qprompt">${q.label}</div>`;
+  if(q.reverse){
+    html+=`<div class="statgrid">`+q.p.s.map((v,i)=>`<div><small>${STAT_LABELS[i]}</small><b>${v}</b></div>`).join("")+`</div>`;
+    html+=`<div class="qprompt" style="font-size:13px">合計 ${q.p.total}</div>`;
+  }
+  if(!q.noMain && !q.reverse && !q.img){ /* ability->pokemon: nothing extra */ }
+  html+=`<div class="choices">`+q.choices.map(c=>`<button class="choice">${c}</button>`).join("")+`</div>`;
+  document.getElementById("qContent").innerHTML=html;
+  if(q.img){const im=document.getElementById("qpic");imgFallback(im,q.p);}
+  document.querySelectorAll("#qContent .choice").forEach(btn=>{
+    btn.onclick=()=>answer(btn,q);
+  });
+}
+function answer(btn,q){
+  const correct=(btn.textContent===q.answer);
+  document.querySelectorAll("#qContent .choice").forEach(b=>{
+    b.disabled=true;
+    if(b.textContent===q.answer)b.classList.add("correct");
+    else if(b===btn)b.classList.add("wrong");
+  });
+  const fb=document.getElementById("qFeedback");
+  if(correct){quizScore++;fb.textContent="正解！ ⭕";fb.className="feedback ok";}
+  else{fb.innerHTML=`不正解 ❌ 正解：<b>${q.answer}</b>（${q.p.jp}）`;fb.className="feedback ng";quizWrong.push(q);}
+  document.getElementById("qScore").textContent=`正解 ${quizScore}`;
+  const nb=document.getElementById("qNext");nb.classList.remove("hidden");
+  nb.textContent=(quizIdx+1<quizQueue.length)?"次へ →":"結果を見る 🏁";
+}
+document.getElementById("qNext").onclick=()=>{
+  quizIdx++;
+  if(quizIdx<quizQueue.length)showQuestion();
+  else showResult();
+};
+function showResult(){
+  document.getElementById("quizPlay").classList.add("hidden");
+  const res=document.getElementById("quizResult");res.classList.remove("hidden");
+  const pct=Math.round(quizScore/quizQueue.length*100);
+  document.getElementById("rScore").textContent=`${quizScore} / ${quizQueue.length}`;
+  let msg=pct>=90?"完璧！🏆":pct>=70?"good！👍":pct>=50?"あと一歩💪":"復習しよう📖";
+  document.getElementById("rDetail").textContent=`正答率 ${pct}% — ${msg}`;
+  const rev=document.getElementById("rReview");
+  if(quizWrong.length===0){rev.innerHTML=`<p class="muted" style="text-align:center">間違いなし！</p>`;}
+  else{
+    const seen=new Set();
+    const items=quizWrong.filter(q=>{if(seen.has(q.p.r))return false;seen.add(q.p.r);return true;});
+    rev.innerHTML=`<h3 style="color:var(--bad);font-size:13px">復習リスト（間違えたポケモン）</h3>`+
+      items.map(q=>`<div class="chip" style="display:block;margin:6px 0">
+        #${q.p.r} <b>${q.p.jp}</b>｜${q.p.t.map(t=>TYPE_JP[t]).join("・")}｜合計${q.p.total}・素早${q.p.s[5]}｜${q.p.ab[0]}</div>`).join("");
+  }
+}
+document.getElementById("retryQuiz").onclick=()=>{
+  document.getElementById("quizResult").classList.add("hidden");
+  document.getElementById("quizSetup").classList.remove("hidden");
+};
+
+/* ===== 素早さ比較（左右） ===== */
+// 検索候補（通常＋メガ）
+const spName2base={};
+(function(){ let o=""; P.forEach(p=>{ spName2base[p.jp]=p.s[5]; o+=`<option value="${p.jp}">#${p.r}・素早${p.s[5]}</option>`;
+  if(p.mega) p.mega.forEach(m=>{ spName2base[m.nm]=m.s[5]; o+=`<option value="${m.nm}">素早${m.s[5]}</option>`; }); });
+  document.getElementById("spList").innerHTML=o; })();
+const spSt={L:{nature:1,rank:0,ranked:0},R:{nature:1,rank:0,ranked:0}};
+function panelHTML(side){
+  const lab=side==="L"?"左":"右";
+  return `<div class="speedbox spside">
+    <div class="sptitle ${side}">${lab}</div>
+    <div class="sprow"><label>検索</label><input id="spSearch_${side}" list="spList" autocomplete="off" placeholder="ポケモン名"></div>
+    <div class="sprow"><label>種族値</label><input id="spBase_${side}" type="number" min="1" max="255" value="102"></div>
+    <div class="sprow"><label>性格</label><div class="btngroup" id="spNat_${side}">
+      <button type="button" data-nat="1.1">▲</button><button type="button" data-nat="1" class="on">●</button><button type="button" data-nat="0.9">▼</button></div></div>
+    <div class="sprow"><label>努力値</label><div class="stepgroup">
+      <button type="button" data-ev="0">0</button><input id="spEv_${side}" type="number" min="0" max="32" value="32"><button type="button" data-ev="32">32</button></div></div>
+    <div class="sprow"><label>ランク</label><div class="stepgroup">
+      <button type="button" data-rk="-1">−</button><span id="spRankVal_${side}" class="stepval">0</span><button type="button" data-rk="1">＋</button></div></div>
+    <div id="spResult_${side}" class="spresult"></div>
+  </div>`;
+}
+document.getElementById("spCompare").innerHTML=panelHTML("L")+panelHTML("R");
+function spStage(real,rank){ const m=rank>=0?(2+rank)/2:2/(2-rank); return Math.floor(real*m); }
+function calcSide(side){
+  const st=spSt[side];
+  const base=Math.max(1,+document.getElementById("spBase_"+side).value||0);
+  const pts=Math.min(32,Math.max(0,+document.getElementById("spEv_"+side).value||0));
+  const ev=Math.min(252,pts*8);
+  let real=Math.floor((base*2+31+Math.floor(ev/4))*50/100+5);  // 個体値31固定
+  real=Math.floor(real*st.nature);
+  const ranked=spStage(real,st.rank); st.ranked=ranked;
+  const scarf=Math.floor(ranked*1.5), tail=Math.floor(ranked*2), para=Math.floor(ranked*0.5);
+  const note=st.rank!==0?` <small>（ランク0なら ${real}）</small>`:"";
+  document.getElementById("spResult_"+side).innerHTML=`
+    <div class="spcard main"><span class="lbl">実数値${st.rank!==0?`（${st.rank>0?"+":""}${st.rank}）`:""}</span><span class="val">${ranked}${note}</span></div>
+    <div class="spcard scarf"><span class="lbl">スカーフ ×1.5</span><span class="val">${scarf}</span></div>
+    <div class="spcard tail"><span class="lbl">追い風 ×2</span><span class="val">${tail}</span></div>
+    <div class="spcard para"><span class="lbl">まひ ×0.5</span><span class="val">${para}</span></div>`;
+  updateVerdict();
+}
+function updateVerdict(){
+  const L=spSt.L.ranked, R=spSt.R.ranked, d=Math.abs(L-R);
+  const el=document.getElementById("spVerdict");
+  if(L===R) el.innerHTML=`<span style="color:var(--sub)">同速（${L}）</span>`;
+  else if(L>R) el.innerHTML=`<span style="color:var(--accent2)">◀ 左が速い</span> <span class="muted" style="font-weight:400">差 ${d}</span>`;
+  else el.innerHTML=`<span style="color:var(--accent)">右が速い ▶</span> <span class="muted" style="font-weight:400">差 ${d}</span>`;
+}
+["L","R"].forEach(side=>{
+  const panel=document.querySelectorAll("#spCompare .spside")[side==="L"?0:1];
+  document.getElementById("spSearch_"+side).addEventListener("input",e=>{ const b=spName2base[e.target.value.trim()]; if(b){ document.getElementById("spBase_"+side).value=b; calcSide(side); } });
+  document.getElementById("spBase_"+side).addEventListener("input",()=>calcSide(side));
+  document.getElementById("spEv_"+side).addEventListener("input",()=>calcSide(side));
+  panel.querySelectorAll("#spNat_"+side+" button").forEach(b=>b.onclick=()=>{
+    panel.querySelectorAll("#spNat_"+side+" button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on"); spSt[side].nature=+b.dataset.nat; calcSide(side); });
+  panel.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>{ document.getElementById("spEv_"+side).value=b.dataset.ev; calcSide(side); });
+  panel.querySelectorAll("[data-rk]").forEach(b=>b.onclick=()=>{
+    spSt[side].rank=Math.min(6,Math.max(-6,spSt[side].rank+ +b.dataset.rk));
+    document.getElementById("spRankVal_"+side).textContent=(spSt[side].rank>0?"+":"")+spSt[side].rank;
+    calcSide(side); });
+});
+function calcSpeed(){ calcSide("L"); calcSide("R"); }
+
+/* ===== ダメージ計算 ===== */
+// タイプ相性表（攻撃→防御、1以外のみ）
+const TEFF={
+ normal:{rock:.5,ghost:0,steel:.5},
+ fire:{fire:.5,water:.5,grass:2,ice:2,bug:2,rock:.5,dragon:.5,steel:2},
+ water:{fire:2,water:.5,grass:.5,ground:2,rock:2,dragon:.5},
+ electric:{water:2,electric:.5,grass:.5,ground:0,flying:2,dragon:.5},
+ grass:{fire:.5,water:2,grass:.5,poison:.5,ground:2,flying:.5,bug:.5,rock:2,dragon:.5,steel:.5},
+ ice:{fire:.5,water:.5,grass:2,ice:.5,ground:2,flying:2,dragon:2,steel:.5},
+ fighting:{normal:2,ice:2,poison:.5,flying:.5,psychic:.5,bug:.5,rock:2,ghost:0,dark:2,steel:2,fairy:.5},
+ poison:{grass:2,poison:.5,ground:.5,rock:.5,ghost:.5,steel:0,fairy:2},
+ ground:{fire:2,electric:2,grass:.5,poison:2,flying:0,bug:.5,rock:2,steel:2},
+ flying:{electric:.5,grass:2,fighting:2,bug:2,rock:.5,steel:.5},
+ psychic:{fighting:2,poison:2,psychic:.5,dark:0,steel:.5},
+ bug:{fire:.5,grass:2,fighting:.5,poison:.5,flying:.5,psychic:2,ghost:.5,dark:2,steel:.5,fairy:.5},
+ rock:{fire:2,ice:2,fighting:.5,ground:.5,flying:2,bug:2,steel:.5},
+ ghost:{normal:0,psychic:2,ghost:2,dark:.5},
+ dragon:{dragon:2,steel:.5,fairy:0},
+ dark:{fighting:.5,psychic:2,ghost:2,dark:.5,fairy:.5},
+ steel:{fire:.5,water:.5,electric:.5,ice:2,rock:2,steel:.5,fairy:2},
+ fairy:{fire:.5,fighting:2,poison:.5,dragon:2,dark:2,steel:.5}
+};
+function effMult(mt,defT){ let e=1; defT.forEach(t=>{ const m=(TEFF[mt]||{})[t]; if(m!==undefined)e*=m; }); return e; }
+// 技データベース [タイプ, 分類(p物理/s特殊/x変化), 威力]（アプリ内の全採用技）
+const MOVEDEX={
+"あくのはどう":["dark","s",80],"あくび":["normal","x",0],"あさのひざし":["normal","x",0],"あまごい":["water","x",0],"いかりのこな":["bug","x",0],"いかりのまえば":["normal","x",0],"いたみわけ":["normal","x",0],"いのちがけ":["fighting","x",0],"いやしのねがい":["psychic","x",0],"いわなだれ":["rock","p",75],"うたかたのアリア":["water","s",90],"うらみつらみ":["ghost","s",75],"おいかぜ":["flying","x",0],"おかたづけ":["normal","p",65],"おきみやげ":["dark","x",0],"おにび":["fire","x",0],"おはかまいり":["ghost","p",50],"かいでんぱ":["electric","x",0],"かえんほうしゃ":["fire","s",90],"かげうち":["ghost","p",40],"かみくだく":["dark","p",80],"かみつく":["dark","p",60],"かみなりパンチ":["electric","p",75],"からげんき":["normal","p",70],"からをやぶる":["normal","x",0],"かわらわり":["fighting","p",75],"がむしゃら":["normal","p",0],"がんせきふうじ":["rock","p",60],"がんせきアックス":["rock","p",65],"きあいだま":["fighting","s",120],"きゅうけつ":["bug","p",80],"きりばらい":["flying","x",0],"くさむすび":["grass","s",60],"くさわけ":["grass","p",50],"くちばしキャノン":["flying","p",100],"くろいきり":["ice","x",0],"けたぐり":["fighting","p",60],"げきりん":["dragon","p",120],"げんしのちから":["rock","s",60],"こうごうせい":["grass","x",0],"こうそくいどう":["psychic","x",0],"こうそくスピン":["normal","p",50],"こおりのつぶて":["ice","p",40],"こおりのキバ":["ice","p",65],"こごえるかぜ":["ice","s",55],"こらえる":["normal","x",0],"こわいかお":["normal","x",0],"さむいギャグ":["ice","x",0],"しおふき":["water","s",150],"しっとのほのお":["fire","s",70],"しっぺがえし":["dark","p",50],"しっぽきり":["normal","x",0],"しねんのずつき":["psychic","p",80],"しんくうは":["fighting","s",40],"しんそく":["normal","p",80],"じこさいせい":["normal","x",0],"じごくづき":["dark","p",80],"じしん":["ground","p",100],"じたばた":["normal","p",0],"じならし":["ground","p",60],"じばく":["normal","p",200],"じゃれつく":["fairy","p",90],"じわれ":["ground","x",0],"すてみタックル":["normal","p",120],"すてゼリフ":["dark","x",0],"せいなるつるぎ":["fighting","p",90],"ぜったいれいど":["ice","x",0],"たきのぼり":["water","p",80],"たたりめ":["ghost","s",65],"たてこもる":["steel","x",0],"だいちのちから":["ground","s",90],"だいばくはつ":["normal","p",250],"だいもんじ":["fire","s",110],"ちからをすいとる":["grass","x",0],"ちょうのまい":["bug","x",0],"ちょうはつ":["dark","x",0],"つきのひかり":["fairy","x",0],"つけあがる":["normal","p",70],"つじぎり":["dark","p",70],"つのドリル":["normal","x",0],"つららおとし":["ice","p",85],"つららばり":["ice","p",25],"つるぎのまい":["normal","x",0],"てっていこうせん":["steel","s",140],"てっぺき":["steel","x",0],"でんこうせっか":["normal","p",40],"でんじは":["electric","x",0],"でんじほう":["electric","s",120],"とぐろをまく":["poison","x",0],"とける":["poison","x",0],"とびかかる":["bug","p",80],"とびつく":["bug","p",50],"とびひざげり":["fighting","p",130],"とんぼがえり":["bug","p",70],"どくづき":["poison","p",80],"どくどく":["poison","x",0],"どくびし":["poison","x",0],"なげつける":["dark","x",0],"なまける":["normal","x",0],"なみのり":["water","s",90],"にほんばれ":["fire","x",0],"ねがいごと":["normal","x",0],"ねこだまし":["normal","p",40],"ねっさのだいち":["ground","s",70],"ねっとう":["water","s",80],"ねばねばネット":["bug","x",0],"ねむりごな":["grass","x",0],"ねむる":["psychic","x",0],"のしかかり":["normal","p",85],"のろい":["ghost","x",0],"はかいこうせん":["normal","s",150],"はたきおとす":["dark","p",65],"はどうだん":["fighting","s",80],"はねやすめ":["flying","x",0],"はめつのひかり":["fairy","s",140],"はらだいこ":["normal","x",0],"ばかぢから":["fighting","p",120],"ひかりのかべ":["psychic","x",0],"ひけん・ちえなみ":["dark","p",65],"ひやみず":["water","s",50],"ふいうち":["dark","p",70],"ふきとばし":["normal","x",0],"ふぶき":["ice","s",110],"ふんどのこぶし":["fighting","p",50],"へびにらみ":["normal","x",0],"へんしん":["normal","x",0],"ほうでん":["electric","s",80],"ほえる":["normal","x",0],"ほのおのまい":["fire","s",80],"ほのおのキバ":["fire","p",65],"ほのおのパンチ":["fire","p",75],"ほろびのうた":["normal","x",0],"ぼうふう":["flying","s",110],"まきびし":["ground","x",0],"まとわりつく":["bug","s",20],"まもる":["normal","x",0],"みがわり":["normal","x",0],"みきり":["fighting","x",0],"みずしゅりけん":["water","s",15],"みずのはどう":["water","s",60],"みずびたし":["water","x",0],"みちづれ":["ghost","x",0],"みわくのボイス":["fairy","s",40],"むしくい":["bug","p",60],"むしのさざめき":["bug","s",90],"むねんのつるぎ":["fire","p",90],"めいそう":["psychic","x",0],"もえつきる":["fire","s",130],"もろはのずつき":["rock","p",150],"やけっぱち":["fire","p",75],"やどりぎのタネ":["grass","x",0],"ゆきなだれ":["ice","p",60],"りゅうせいぐん":["dragon","s",130],"りゅうのはどう":["dragon","s",85],"りゅうのまい":["dragon","x",0],"れいとうパンチ":["ice","p",75],"れいとうビーム":["ice","s",90],"わるだくみ":["dark","x",0],
+"アイアンヘッド":["steel","p",80],"アイススピナー":["ice","p",80],"アクアカッター":["water","p",70],"アクアジェット":["water","p",40],"アクアブレイク":["water","p",85],"アクロバット":["flying","p",55],"アシストパワー":["psychic","s",20],"アシッドボム":["poison","x",0],"アンコール":["normal","x",0],"アーマーキャノン":["fire","s",120],"アームハンマー":["fighting","p",100],"イカサマ":["dark","p",95],"インファイト":["fighting","p",120],"ウェザーボール":["normal","s",50],"ウェーブタックル":["water","p",120],"ウッドハンマー":["grass","p",120],"エアスラッシュ":["flying","s",75],"エナジーボール":["grass","s",90],"エレクトロビーム":["electric","s",130],"オーバーヒート":["fire","s",130],"オーロラベール":["ice","x",0],"キラースピン":["poison","p",30],"キングシールド":["steel","x",0],"ギガインパクト":["normal","p",150],"ギガドレイン":["grass","s",75],"クイックターン":["water","p",60],"コスモパワー":["psychic","x",0],"コットンガード":["grass","x",0],"コメットパンチ":["steel","p",90],"ゴーストダイブ":["ghost","p",90],"ゴールドラッシュ":["steel","s",120],"サイコカッター":["psychic","p",70],"サイコキネシス":["psychic","s",90],"サイコショック":["psychic","s",80],"サイコノイズ":["psychic","s",75],"サイコファング":["psychic","p",85],"サイコフィールド":["psychic","x",0],"サンダーダイブ":["electric","p",100],"シェルブレード":["water","p",75],"シザークロス":["bug","p",80],"シャカシャカほう":["grass","s",80],"シャドークロー":["ghost","p",70],"シャドーボール":["ghost","s",80],"スケイルショット":["dragon","p",25],"ステルスロック":["rock","x",0],"ストーンエッジ":["rock","p",100],"ソウルクラッシュ":["fairy","p",75],"ソーラービーム":["grass","s",120],"タネばくだん":["grass","p",80],"タネマシンガン":["grass","p",25],"ダストシュート":["poison","p",120],"ダブルウイング":["flying","p",40],"トリック":["psychic","x",0],"トリックフラワー":["grass","p",70],"トリックルーム":["psychic","x",0],"トリプルアクセル":["ice","p",20],"トーチカ":["poison","x",0],"ドゲザン":["dark","p",85],"ドラゴンアロー":["dragon","p",50],"ドラゴンクロー":["dragon","p",80],"ドラゴンテール":["dragon","p",60],"ドリルライナー":["ground","p",80],"ドレインキッス":["fairy","s",50],"ドレインパンチ":["fighting","p",75],"ニトロチャージ":["fire","p",50],"ニードルガード":["grass","x",0],"ネズミざん":["normal","p",20],"ハイドロポンプ":["water","s",110],"ハイパーボイス":["normal","s",90],"ハサミギロチン":["normal","x",0],"バトンタッチ":["normal","x",0],"バレットパンチ":["steel","p",40],"バークアウト":["dark","s",55],"パラボラチャージ":["electric","s",65],"パワーウィップ":["grass","p",120],"パワージェム":["rock","s",80],"ヒートスタンプ":["fire","p",60],"ビルドアップ":["fighting","x",0],"フェイタルクロー":["poison","p",80],"フェイント":["normal","p",30],"フリーズドライ":["ice","s",70],"フレアソング":["fire","s",80],"フレアドライブ":["fire","p",120],"ブレイズキック":["fire","p",85],"ブレイブバード":["flying","p",120],"ヘドロばくだん":["poison","s",90],"ヘドロウェーブ":["poison","s",95],"ヘビーボンバー":["steel","p",80],"ボディプレス":["fighting","p",80],"ボルトチェンジ":["electric","s",70],"ポルターガイスト":["ghost","p",110],"マジカルシャイン":["fairy","s",80],"マジカルフレイム":["fire","s",75],"マッドショット":["ground","s",55],"マッハパンチ":["fighting","p",40],"ミストバースト":["fairy","s",100],"ミストフィールド":["fairy","x",0],"ミラーコート":["psychic","x",0],"ムーンフォース":["fairy","s",95],"メガトンキック":["normal","p",120],"メタルバースト":["steel","x",0],"ラスターカノン":["steel","s",80],"リフレクター":["psychic","x",0],"リーフストーム":["grass","s",130],"リーフブレード":["grass","p",90],"ルミナコリジョン":["psychic","s",80],"ロックブラスト":["rock","p",25],"ワイドフォース":["psychic","s",80],"ワイルドボルト":["electric","p",90],"１０まんボルト":["electric","s",90],"ＤＤラリアット":["dark","p",85]
+};
+// 名前→{s,t}（通常＋メガ）
+const dmgIndex={};
+P.forEach(p=>{ dmgIndex[p.jp]={s:p.s,t:p.t}; if(p.mega)p.mega.forEach(m=>dmgIndex[m.nm]={s:m.s,t:m.t}); });
+const dSt={cat:"phys",natA:1,rankA:0,natD:1,rankD:0,
+  atkS:[108,130,95,80,85,102],atkT:["dragon","ground"],
+  defS:[160,110,65,65,110,30],defT:["normal"]};
+const typeOpts=Object.keys(TYPE_JP).map(t=>`<option value="${t}">${TYPE_JP[t]}</option>`).join("");
+function dmgPanels(){
+  return `<div class="speedbox spside">
+    <div class="sptitle L">⚔ 攻撃（左）</div>
+    <div class="sprow"><label>検索</label><input id="dSearch_A" list="dmgList" autocomplete="off" placeholder="ポケモン名"></div>
+    <div class="sprow"><label>技</label><input id="dMove" list="dMoveList" autocomplete="off" placeholder="技名で選択"></div>
+    <div class="sprow"><label>技威力</label><input id="dPow" type="number" min="0" max="250" value="100"></div>
+    <div class="sprow"><label>技タイプ</label><select id="dMoveType">${typeOpts}</select></div>
+    <div class="sprow"><label>分類</label><div class="btngroup" id="dCat">
+      <button type="button" data-cat="phys" class="on">物理</button><button type="button" data-cat="spec">特殊</button></div></div>
+    <div class="sprow"><label>攻撃種族値</label><input id="dAtkBase" type="number" min="1" max="255" value="130"></div>
+    <div class="sprow"><label>性格</label><div class="btngroup" id="dNat_A">
+      <button type="button" data-nat="1.1">▲</button><button type="button" data-nat="1" class="on">●</button><button type="button" data-nat="0.9">▼</button></div></div>
+    <div class="sprow"><label>努力値</label><div class="stepgroup">
+      <button type="button" data-ev="dEv_A:0">0</button><input id="dEv_A" type="number" min="0" max="32" value="32"><button type="button" data-ev="dEv_A:32">32</button></div></div>
+    <div class="sprow"><label>ランク</label><div class="stepgroup">
+      <button type="button" data-rk="A:-1">−</button><span id="dRankVal_A" class="stepval">0</span><button type="button" data-rk="A:1">＋</button></div></div>
+    <div class="sprow"><label>持ち物</label><select id="dItem">
+      <option value="1">なし</option><option value="1.3">いのちのたま ×1.3</option><option value="1.5">こだわり系 ×1.5</option><option value="1.2">たつじんのおび ×1.2</option></select></div>
+    <div class="dmgmini"><label><input type="checkbox" id="dCrit"> 急所 ×1.5</label><label><input type="checkbox" id="dBurn"> やけど（物理½）</label></div>
+  </div>
+  <div class="speedbox spside">
+    <div class="sptitle R">🛡 防御（右）</div>
+    <div class="sprow"><label>検索</label><input id="dSearch_D" list="dmgList" autocomplete="off" placeholder="ポケモン名"></div>
+    <div class="sprow"><label>タイプ</label><span id="dDefTypes" class="muted" style="font-size:13px">ノーマル</span></div>
+    <div class="sprow"><label>防御種族値</label><input id="dDefBase" type="number" min="1" max="255" value="65"></div>
+    <div class="sprow"><label>性格</label><div class="btngroup" id="dNat_D">
+      <button type="button" data-nat="1.1">▲</button><button type="button" data-nat="1" class="on">●</button><button type="button" data-nat="0.9">▼</button></div></div>
+    <div class="sprow"><label>努力値</label><div class="stepgroup">
+      <button type="button" data-ev="dEv_D:0">0</button><input id="dEv_D" type="number" min="0" max="32" value="0"><button type="button" data-ev="dEv_D:32">32</button></div></div>
+    <div class="sprow"><label>ランク</label><div class="stepgroup">
+      <button type="button" data-rk="D:-1">−</button><span id="dRankVal_D" class="stepval">0</span><button type="button" data-rk="D:1">＋</button></div></div>
+    <div class="sprow"><label>HP種族値</label><input id="dHpBase" type="number" min="1" max="255" value="160"></div>
+    <div class="sprow"><label>HP努力値</label><div class="stepgroup">
+      <button type="button" data-ev="dHpEv:0">0</button><input id="dHpEv" type="number" min="0" max="32" value="0"><button type="button" data-ev="dHpEv:32">32</button></div></div>
+  </div>`;
+}
+document.getElementById("dmgCompare").innerHTML=dmgPanels();
+document.getElementById("dmgList").innerHTML=Object.keys(dmgIndex).map(n=>`<option value="${n}">`).join("");
+document.getElementById("dMoveList").innerHTML=Object.keys(MOVEDEX).map(n=>`<option value="${n}">`).join("");
+function statR(base,nat,pts,rank){ const ev=Math.min(252,pts*8); let r=Math.floor((base*2+31+Math.floor(ev/4))*50/100+5); r=Math.floor(r*nat); const m=rank>=0?(2+rank)/2:2/(2-rank); return Math.floor(r*m); }
+function hpR(base,pts){ const ev=Math.min(252,pts*8); return Math.floor((base*2+31+Math.floor(ev/4))*50/100)+50+10; }
+const $=id=>document.getElementById(id);
+function refillBases(){ // 分類に応じて攻撃/防御の種族値を選択中ポケモンから更新
+  $("dAtkBase").value=dSt.cat==="phys"?dSt.atkS[1]:dSt.atkS[3];
+  $("dDefBase").value=dSt.cat==="phys"?dSt.defS[2]:dSt.defS[4];
+  $("dHpBase").value=dSt.defS[0];
+}
+function grounded(types){ return !types.includes("flying"); }
+function calcDmg(){
+  const cat=dSt.cat;
+  const power=Math.max(0,+$("dPow").value||0);
+  const mt=$("dMoveType").value;
+  const weather=$("dWeather").value, terrain=$("dTerrain").value, wall=$("dWall").value;
+  const A=statR(Math.max(1,+$("dAtkBase").value||1),dSt.natA,+$("dEv_A").value||0,dSt.rankA);
+  let D=statR(Math.max(1,+$("dDefBase").value||1),dSt.natD,+$("dEv_D").value||0,dSt.rankD);
+  // 天候による防御補正（砂＝岩の特防1.5／雪＝氷の防御1.5）
+  if(weather==="sand" && cat==="spec" && dSt.defT.includes("rock")) D=Math.floor(D*1.5);
+  if(weather==="snow" && cat==="phys" && dSt.defT.includes("ice")) D=Math.floor(D*1.5);
+  const HP=hpR(Math.max(1,+$("dHpBase").value||1),+$("dHpEv").value||0);
+  const stab=dSt.atkT.includes(mt)?1.5:1;
+  const e=effMult(mt,dSt.defT);
+  const item=+$("dItem").value;
+  const crit=$("dCrit").checked?1.5:1;
+  const burn=($("dBurn").checked&&cat==="phys")?0.5:1;
+  // 天候による技倍率
+  let wMul=1;
+  if(weather==="sun"){ if(mt==="fire")wMul=1.5; else if(mt==="water")wMul=0.5; }
+  if(weather==="rain"){ if(mt==="water")wMul=1.5; else if(mt==="fire")wMul=0.5; }
+  // フィールド（地に足がついている前提＝ひこう以外）
+  let tMul=1; const atkGr=grounded(dSt.atkT), defGr=grounded(dSt.defT);
+  if(terrain==="electric" && atkGr && mt==="electric") tMul=1.3;
+  if(terrain==="grassy" && atkGr && mt==="grass") tMul=1.3;
+  if(terrain==="psychic" && atkGr && mt==="psychic") tMul=1.3;
+  if(terrain==="grassy" && defGr && mt==="ground") tMul=0.5;
+  if(terrain==="misty" && defGr && mt==="dragon") tMul=0.5;
+  // 壁（急所時は無効）
+  let wallMul=1;
+  if(crit===1){ if((wall==="reflect"&&cat==="phys")||(wall==="light"&&cat==="spec")||wall==="aurora") wallMul=0.5; }
+  $("dDefTypes").textContent=dSt.defT.map(t=>TYPE_JP[t]).join("・")||"—";
+  const res=$("dmgResult");
+  const effLbl=e===0?'<span class="dmgeff" style="background:#5a5366;color:#fff">こうかなし（無効）</span>'
+    :e>1?`<span class="dmgeff" style="background:#3ddc84;color:#06351c">こうかばつぐん ×${e}</span>`
+    :e<1?`<span class="dmgeff" style="background:#ff8a5c;color:#3a0007">いまひとつ ×${e}</span>`
+    :`<span class="dmgeff" style="background:var(--panel2);color:var(--sub)">等倍 ×1</span>`;
+  const tags=[]; if(stab>1)tags.push("一致"); if(crit>1)tags.push("急所"); if(burn<1)tags.push("やけど");
+  if(wMul!==1)tags.push("天候"); if(tMul!==1)tags.push("フィールド"); if(wallMul<1)tags.push("壁"); if(item>1)tags.push("道具");
+  const tagLine=tags.length?`<div class="muted" style="font-size:12px;margin-top:6px">適用補正：${tags.join("・")}</div>`:"";
+  if(power===0){ res.innerHTML=`${effLbl}<div class="dmgko">変化技／威力0</div>`; return; }
+  if(e===0){ res.innerHTML=`${effLbl}<div class="dmgbig">0</div><div class="dmgko">ダメージを与えられない</div>`; return; }
+  const base=Math.floor(Math.floor(22*power*A/D)/50)+2;
+  const rolls=[];
+  for(let r=85;r<=100;r++){ let d=base; d=Math.floor(d*crit); d=Math.floor(d*r/100); d=Math.floor(d*stab); d=Math.floor(d*e); d=Math.floor(d*burn); d=Math.floor(d*item); d=Math.floor(d*wMul); d=Math.floor(d*tMul); d=Math.floor(d*wallMul); rolls.push(Math.max(1,d)); }
+  const mn=rolls[0],mx=rolls[15];
+  const pMn=(mn/HP*100),pMx=(mx/HP*100);
+  const fastest=Math.ceil(HP/mx), guaranteed=Math.ceil(HP/mn);
+  let ko = fastest===guaranteed?`<span style="color:var(--bad)">確定${guaranteed}発</span>`
+    :`<span style="color:var(--accent)">乱数${fastest}発</span> <span class="muted" style="font-size:14px;font-weight:400">（確定${guaranteed}発）</span>`;
+  let extra="";
+  if(fastest===1){ const cnt=rolls.filter(x=>x>=HP).length; extra=`<div class="muted" style="margin-top:4px">1発で倒せる確率 ${Math.round(cnt/16*100)}%</div>`; }
+  res.innerHTML=`${effLbl}
+    <div class="dmgbig">${mn} 〜 ${mx} <span style="font-size:15px;color:var(--sub)">ダメージ</span></div>
+    <div class="dmgpct">相手のHP ${HP} の ${pMn.toFixed(1)}% 〜 ${pMx.toFixed(1)}%</div>
+    <div class="dmgbarwrap"><div class="lo" style="width:${Math.min(100,pMn)}%"></div><div class="hi" style="width:${Math.min(100,pMx)}%"></div></div>
+    <div class="dmgko">${ko}</div>${extra}${tagLine}`;
+}
+// イベント配線
+$("dmgCompare").addEventListener("input",e=>{
+  const t=e.target;
+  if(t.id==="dSearch_A"){ const m=dmgIndex[t.value.trim()]; if(m){ dSt.atkS=m.s; dSt.atkT=m.t; refillBases(); } }
+  if(t.id==="dSearch_D"){ const m=dmgIndex[t.value.trim()]; if(m){ dSt.defS=m.s; dSt.defT=m.t; refillBases(); } }
+  if(t.id==="dMove"){ const m=MOVEDEX[t.value.trim()]; if(m){ $("dPow").value=m[2]; $("dMoveType").value=m[0];
+    if(m[1]!=="x"){ const cat=m[1]==="s"?"spec":"phys"; dSt.cat=cat; document.querySelectorAll("#dCat button").forEach(x=>x.classList.toggle("on",x.dataset.cat===cat)); refillBases(); } } }
+  calcDmg();
+});
+$("dmgCompare").addEventListener("change",calcDmg);
+$("dmgField").addEventListener("change",calcDmg);
+$("dmgCompare").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b)return;
+  if(b.dataset.cat){ dSt.cat=b.dataset.cat; document.querySelectorAll("#dCat button").forEach(x=>x.classList.toggle("on",x===b)); refillBases(); calcDmg(); }
+  else if(b.dataset.nat){ const grp=b.parentElement; grp.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); if(grp.id==="dNat_A")dSt.natA=+b.dataset.nat; else dSt.natD=+b.dataset.nat; calcDmg(); }
+  else if(b.dataset.ev){ const[id,v]=b.dataset.ev.split(":"); $(id).value=v; calcDmg(); }
+  else if(b.dataset.rk){ const[side,delta]=b.dataset.rk.split(":"); const k=side==="A"?"rankA":"rankD"; dSt[k]=Math.min(6,Math.max(-6,dSt[k]+ +delta)); $("dRankVal_"+side).textContent=(dSt[k]>0?"+":"")+dSt[k]; calcDmg(); }
+});
+
+/* init */
+renderList();
+calcSpeed();
+refillBases();
+calcDmg();
+</script>
+</body>
+</html>
